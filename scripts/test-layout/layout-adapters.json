@@ -30,5 +30,8 @@
   "claude-chat-tool-dispatch.test.ts": "claude-integration",
   "claude-chat-tool-dispatch-routes.test.ts": "claude-integration",
   "anthropic-affinity-restart.test.ts": "adapters/anthropic",
-  "anthropic-affinity-store.test.ts": "adapters/anthropic"
+  "anthropic-affinity-store.test.ts": "adapters/anthropic",
+  "google-error-details.test.ts": "adapters/google",
+  "google-retry-structured.test.ts": "adapters/google",
+  "google-finish-fidelity.test.ts": "adapters/google"
 }
