@@ -134,7 +134,7 @@ export async function fetchGoogleWithRetry(
         }
       }
       if (!retryableGoogleStatus(res.status) || attempt === TRANSIENT_RETRY_MAX_ATTEMPTS - 1) {
-        return ctx.returnRawErrors ? res : normalizeFinalGoogleError(label, res, activeRequest, ctx.abortSignal);
+        return finalGoogleAnswer(label, res, activeRequest, ctx);
       }
       // A 429 may be a transient rate limit (retry) or hard quota exhaustion (do NOT retry —
       // it won't recover for hours and burns retries). Peek the body to tell them apart.
@@ -190,7 +190,7 @@ export async function fetchGoogleWithRetry(
           // upstream answer — but it used to leave the log indistinguishable from a request
           // where no retry was ever eligible (#5044).
           ctx.onRecoveryWithheld?.({ reason: "retry-send-budget" });
-          return ctx.returnRawErrors ? pendingResponse : normalizeFinalGoogleError(label, pendingResponse, activeRequest, ctx.abortSignal);
+          return finalGoogleAnswer(label, pendingResponse, activeRequest, ctx);
         }
         throw err;
       }
@@ -205,6 +205,21 @@ export async function fetchGoogleWithRetry(
     }
   }
   throw lastError ?? new Error(`${label} fetch failed`);
+}
+
+/**
+ * The upstream answer that ends the retry ladder. Running out of attempts stops another send; it
+ * must not drop a 429's body-stated wait, so that wait rides as Retry-After on the raw or the
+ * normalized answer alike (an explicit upstream header wins).
+ */
+async function finalGoogleAnswer(label: string, res: Response, request: AdapterRequest, ctx: AdapterFetchContext & { returnRawErrors?: boolean }): Promise<Response> {
+  const bodyRetryAfter = res.status === 429 && !res.headers.has("retry-after")
+    ? extractGoogleRetryAfterSeconds(await readDisplaySafeErrorPayloadText(res.clone(), ctx.abortSignal))
+    : undefined;
+  if (ctx.returnRawErrors) return withBodyRetryAfter(res, bodyRetryAfter);
+  const final = await normalizeFinalGoogleError(label, res, request, ctx.abortSignal);
+  if (bodyRetryAfter && !final.headers.has("retry-after")) final.headers.set("retry-after", bodyRetryAfter);
+  return final;
 }
 
 /**
