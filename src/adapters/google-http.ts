@@ -138,10 +138,12 @@ export async function fetchGoogleWithRetry(
       }
       // A 429 may be a transient rate limit (retry) or hard quota exhaustion (do NOT retry —
       // it won't recover for hours and burns retries). Peek the body to tell them apart.
+      let delayHeaders: Headers = res.headers;
+      let bodyRetryAfter: string | undefined;
       if (res.status === 429) {
         const peekTarget = res.clone();
         const peek = await readDisplaySafeErrorPayloadText(peekTarget, ctx.abortSignal);
-        if (isQuotaExhaustedBody(peek)) {
+        if (isQuotaExhaustedBody(peek, label)) {
           if (ctx.returnRawErrors) return res;
           const normalized = await normalizeUpstreamHttpErrorResponse(res, {
             signal: ctx.abortSignal,
@@ -153,6 +155,12 @@ export async function fetchGoogleWithRetry(
           }
           return normalized;
         }
+        // A wait stated only in the body (RetryInfo, quotaResetDelay) is the same instruction as
+        // a Retry-After header, so it floors the backoff too; an explicit header still wins.
+        if (!res.headers.has("retry-after")) {
+          bodyRetryAfter = extractGoogleRetryAfterSeconds(peek);
+          if (bodyRetryAfter) { delayHeaders = new Headers(res.headers); delayHeaders.set("retry-after", bodyRetryAfter); }
+        }
       }
       // Retry-After names the earliest send Google will serve (#7802). The local maximum bounds
       // only our own backoff; it must not shorten the provider's instruction into a send it
@@ -161,11 +169,14 @@ export async function fetchGoogleWithRetry(
       const delayMs = retryBackoffDelayMs(attempt, {
         baseDelayMs: GOOGLE_RETRY_BASE_MS,
         maxDelayMs: GOOGLE_RETRY_MAX_MS,
-        headers: res.headers,
+        headers: delayHeaders,
         retryAfterIsLowerBound: true,
       });
       if (delayMs > RETRY_AFTER_CEILING_MS) {
-        return ctx.returnRawErrors ? res : normalizeFinalGoogleError(label, res, activeRequest, ctx.abortSignal);
+        if (ctx.returnRawErrors) return res;
+        const final = await normalizeFinalGoogleError(label, res, activeRequest, ctx.abortSignal);
+        if (bodyRetryAfter && !final.headers.has("retry-after")) final.headers.set("retry-after", bodyRetryAfter);
+        return final;
       }
       pendingResponse = res;
       recovery = res.status === 429 ? "rate-limit-429" : "transient-5xx";
