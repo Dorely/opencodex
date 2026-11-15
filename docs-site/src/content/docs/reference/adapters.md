@@ -489,7 +489,13 @@ Use `liveModels: false` for a static catalog; Settings can switch between the tw
   upstream 400; message-only terminal paths infer 403 (permission class). The restriction itself
   is Google's — the proxy does not route around it.
 - System prompt → `systemInstruction`; messages → `contents[]` (assistant → `model`); tools →
-  `functionDeclarations`. Data-URL images → `inline_data`.
+  `functionDeclarations`. Data-URL images → `inline_data`. WAV and MP3 audio → `inline_data`
+  (`audio/wav`, `audio/mp3`), except for Claude models on Antigravity, which keep the text marker. A
+  tool result flagged as an error is sent as `functionResponse.response.error`, Google's documented key
+  for a failed call; other results use `response.result`.
+- Vertex project endpoints use `aiplatform.googleapis.com` for `global`,
+  `aiplatform.us.rep.googleapis.com` and `aiplatform.eu.rep.googleapis.com` for the `us` and `eu`
+  multi-regions, and `<location>-aiplatform.googleapis.com` for a region such as `us-central1`.
 - Tool-call ids are synthesized when Gemini omits them. Vertex and Antigravity preserve and replay
   opaque `thoughtSignature` values so tool-result continuations retain Gemini reasoning continuity.
   The signature cache is snapshotted to the config directory, so continuations also survive proxy
