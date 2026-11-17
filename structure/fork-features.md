@@ -62,3 +62,23 @@ row per distinct target provider with 5-hour and weekly percent inputs, blank me
 save body carries `quotaLimits` only when the combo has one, filtered to providers it still targets.
 The management combo save stores the combo-level list, never the per-target `quotaLimit`, keeps a
 stored list when the request omits the field, and clears it on an empty array.
+
+## Modality probe
+
+`POST /api/fork/modality-probes` with `{ provider, model, modality: "image" }` tests whether a routed
+model reads image input (`src/server/management/fork-modality-probe.ts`). It renders a PNG of a random
+five-digit number (`src/vision/fork-probe-image.ts`), sends it to `provider/model` through the
+proxy's own `/v1/chat/completions` on loopback with a prompt to reply with the digits, and passes
+only when a digit run in the reply equals the number. A pass on a model that does not already resolve
+to image writes `modelCapabilities[model].inputModalities` (its current modalities, text kept, plus
+image), clears the provider's model cache and converges the Codex catalog. A failure writes nothing.
+Every result is recorded in `<config dir>/fork/modality-probes.json`, which `GET` returns.
+
+The request carries `x-opencodex-fork-modality-probe` with the process's internal-call capability;
+`src/server/chat-completions.ts` then skips the hidden-model refusal for it, so a hidden provider model
+can be probed. A model declared text-only (a Vision Sidecar consumer) is refused with 409, because the
+sidecar would read the image for it. The native `openai` lane and combos cannot be probed.
+
+The combo detail panel lists targets whose row does not declare image input
+(`gui/src/fork/ComboModalityProbeField.tsx`) with a "Test image input" button and the last result;
+a pass that declared image reloads the page's model rows, so the image input switch can turn on.

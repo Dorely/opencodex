@@ -111,7 +111,7 @@ import { parseSyntheticRowId } from "./fast-row";
 import { isCanonicalOpenAiForwardProvider } from "../providers/openai-tiers";
 import { CODEX_RESERVE_HELPER_UNSUPPORTED_MESSAGE, isCodexReserveHelperUnsupported } from "../codex/loopback-target";
 import { applyDroidReasoningDefault, droidReasoningDefault, DROID_DEFAULT_EFFORT_HEADER } from "./droid-reasoning-default";
-import { assertModelNotHidden } from "../routing/hidden-models";
+import { assertModelNotHidden, MODALITY_PROBE_HEADER } from "../routing/hidden-models";
 
 type Rec = Record<string, unknown>;
 
@@ -180,6 +180,8 @@ async function handleChatCompletionsWithBudget(
   },
 ): Promise<Response> {
   const advisorInternal = isInternalCallCapability(req.headers.get(ADVISOR_INTERNAL_CAPABILITY_HEADER));
+  // Fork: the modality probe names a provider model on the operator's behalf (src/routing/hidden-models.ts).
+  const forkModalityProbe = isInternalCallCapability(req.headers.get(MODALITY_PROBE_HEADER));
   const sidecarInternal = isInternalCallCapability(req.headers.get(SIDECAR_INTERNAL_CAPABILITY_HEADER));
   const callerPolicy = advisorInternal
     ? readAdvisorAdmissionPolicy(req.headers.get(ADVISOR_ADMISSION_POLICY_HEADER), req.headers.get(ADVISOR_INTERNAL_CAPABILITY_HEADER))
@@ -253,7 +255,7 @@ async function handleChatCompletionsWithBudget(
   try {
     const route = routeModel(config, chatBody.model as string, evidenceFromBody(chatBody));
     // Fork: a hidden model skips the native lane; the Responses path below refuses it.
-    assertModelNotHidden(config, chatBody.model as string, route);
+    if (!forkModalityProbe) assertModelNotHidden(config, chatBody.model as string, route);
     // Preserve the routed destination for Go recognition, then settle the wire before
     // deriving protocol-scoped affinity. Recognition must not inspect the flipped adapter.
     const routedProvider = route.provider;
@@ -604,6 +606,7 @@ async function handleChatCompletionsWithBudget(
     // header — so the fact is detected here and carried as an option flag.
     ...(visionDescribeTerminal ? { visionDescribeTerminal: true } : {}),
     ...(advisorInternal ? { advisorInternal: true } : {}),
+    ...(forkModalityProbe ? { hiddenModelExempt: true } : {}),
     ...(inheritedAdmissionScope ? { admissionScope: inheritedAdmissionScope } : {}),
     translatorBudget,
     ...(logIds ? { onFirstOutput: () => recordFirstOutput(logCtx, logIds.start) } : {}),

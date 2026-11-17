@@ -244,6 +244,7 @@ export default function ComboWorkspace({
               onRefresh();
             }}
             onRequestRemove={() => setRemoveId(baseline.id)}
+            onModelsChanged={onRefresh}
             onSave={onSave}
             onDirtyChange={setDetailDirty}
           />

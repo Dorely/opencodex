@@ -2,5 +2,7 @@
   "fork-hidden-models.test.ts": "routing",
   "fork-combo-quota-limits.test.ts": "routing",
   "fork-combo-quota-limits-gui.test.ts": "gui",
-  "fork-combo-quota-limits-route.test.ts": "routing"
+  "fork-combo-quota-limits-route.test.ts": "routing",
+  "fork-modality-probe.test.ts": "routing",
+  "fork-modality-probe-gui.test.ts": "gui"
 }

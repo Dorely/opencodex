@@ -24,6 +24,13 @@ import type { OcxConfig } from "../types";
 
 export const MODEL_HIDDEN_CODE = "model_hidden";
 
+/**
+ * Header the fork modality probe (src/server/management/fork-modality-probe.ts) sends with the
+ * process's internal-call capability. The operator chose that call, so it is not refused when the
+ * probed model is hidden.
+ */
+export const MODALITY_PROBE_HEADER = "x-opencodex-fork-modality-probe";
+
 export class HiddenModelError extends Error {
   readonly code = MODEL_HIDDEN_CODE;
   constructor(readonly requestedModel: string) {

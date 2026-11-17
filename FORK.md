@@ -127,6 +127,26 @@ Each entry names the files touched, why, and what a merge must preserve.
   `quotaLimits` only when the combo has one, because upstream GUI tests assert the exact save body; if
   upstream reshapes the combo editor or its save body, move the field and the sparse send with it.
 
+## Modality probe
+
+- **Files:** `src/server/management/fork-modality-probe.ts` and `src/vision/fork-probe-image.ts`
+  (new); `src/server/management-api.ts` (one dispatch line), `src/server/management/route-registry.ts`
+  (two `gui-only` entries for `/api/fork/modality-probes`), `src/routing/hidden-models.ts`
+  (`MODALITY_PROBE_HEADER`), `src/server/chat-completions.ts` (reads that header with
+  `isInternalCallCapability`, skips `assertModelNotHidden`, passes `hiddenModelExempt`). Dashboard:
+  `gui/src/fork/ComboModalityProbeField.tsx` and `gui/src/fork/modality-probe-candidates.ts` (new),
+  rendered by `gui/src/components/combo-workspace-detail-panel.tsx`, which gains an
+  `onModelsChanged` prop that `gui/src/components/ComboWorkspace.tsx` wires to its refresh. How it
+  behaves: [structure/fork-features.md](structure/fork-features.md#modality-probe).
+- **Why:** a provider catalog can leave a model's image input undeclared (Command Code's
+  `google/gemini-4-carbon`), which blocks image input on every combo that uses it. The probe proves
+  the model reads images and then declares it.
+- **Merge must preserve:** a pass writes only `modelCapabilities[model].inputModalities`, the field
+  upstream's Model settings dialog edits; the probe goes through `/v1/chat/completions` on loopback so
+  the real adapter builds the wire; the hidden-model exemption needs the process capability, never the
+  bare header. If upstream moves the chat surface's hidden check or its `advisorInternal` capability
+  read, move the probe check with them.
+
 ## Fork tests, layout and docs
 
 - **Files:** `tests/routing/fork-*.test.ts`, `tests/gui/fork-*.test.ts`,

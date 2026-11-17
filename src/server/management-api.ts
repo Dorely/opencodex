@@ -71,6 +71,7 @@ import { handleClaudeInterceptRoutes } from "./management/claude-intercept-route
 import { handleAgentSettingsRoutes } from "./management/agent-settings-routes";
 import { handleOauthAccountRoutes } from "./management/oauth-account-routes";
 import { handleComboRoutes } from "./management/combo-routes";
+import { handleForkModalityProbeRoutes } from "./management/fork-modality-probe";
 import { handleDecisionRoutes } from "./management/decision-routes";
 import { handleSystemRoutes } from "./management/system-routes";
 import { handleSidebarRoutes } from "./management/sidebar-routes";
@@ -406,6 +407,7 @@ export async function handleManagementAPI(
     ??     (await handleOauthAccountRoutes(ctx))
     ??     (await handleDecisionRoutes(ctx))
     ??     (await handleComboRoutes(ctx))
+    ??     (await handleForkModalityProbeRoutes(ctx))
     ??     (await handleSystemRoutes(ctx))
     ??     (await handleLabRoutesOnDemand(ctx))
       ?? (await handleTelemetryRoutesOnDemand(ctx))

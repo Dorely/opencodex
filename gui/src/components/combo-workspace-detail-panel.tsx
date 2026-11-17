@@ -21,6 +21,7 @@ import { clampedNumberInput, comboDraftErrorText } from "./combo-workspace-utils
 import type { JevDecisionRow } from "../jev-decision-service";
 import { JevStatsPanel } from "./jev-stats-panel";
 import { ComboQuotaLimitsField } from "../fork/ComboQuotaLimitsField";
+import { ComboModalityProbeField } from "../fork/ComboModalityProbeField";
 import { ComboProtocolPlan } from "./protocols/ComboProtocolPlan";
 
 type DetailTab = "config" | "stats" | "about";
@@ -56,6 +57,7 @@ export function DetailPanel({
   onRequestRemove,
   onSave,
   onDirtyChange,
+  onModelsChanged,
 }: {
   /** Management API target; without it the candidate path preview is not offered and JEV stats use same-origin paths. */
   apiBase?: string;
@@ -79,6 +81,8 @@ export function DetailPanel({
   onRequestRemove?: () => void;
   onSave: (item: ComboItem, isCreate: boolean, renameFrom?: string) => Promise<{ ok: boolean; error?: string }>;
   onDirtyChange: (dirty: boolean) => void;
+  /** Fork: reload model rows after a modality probe declared a new modality. */
+  onModelsChanged?: () => void;
 }) {
   const t = useT();
   const [tab, setTab] = useState<DetailTab>("config");
@@ -417,6 +421,13 @@ export function DetailPanel({
               visionEnabled={visionEnabled}
               disabled={busy}
               onChange={(patch) => updateDraft((d) => ({ ...d, ...patch }))}
+            />
+            <ComboModalityProbeField
+              apiBase={apiBase}
+              targets={draft.targets}
+              models={capabilityModels}
+              disabled={busy}
+              onDeclared={onModelsChanged}
             />
           </div>
         )}

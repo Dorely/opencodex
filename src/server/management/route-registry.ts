@@ -226,6 +226,9 @@ export const MANAGEMENT_ROUTES: readonly ManagementRoute[] = [
   { method: "DELETE", path: "/api/combos", module: "server/management/combo-routes", mutates: true },
   { method: "GET", path: "/api/combos", module: "server/management/combo-routes", mutates: false },
   { method: "PUT", path: "/api/combos", module: "server/management/combo-routes", mutates: true },
+  // Fork: modality probe (FORK.md).
+  { method: "GET", path: "/api/fork/modality-probes", module: "server/management/fork-modality-probe", mutates: false, exempt: { reason: "gui-only", why: "Fork: recorded modality probe results, shown beside combo targets in the dashboard." } },
+  { method: "POST", path: "/api/fork/modality-probes", module: "server/management/fork-modality-probe", mutates: true, exempt: { reason: "gui-only", why: "Fork: runs a modality probe from the combo editor; a pass declares the modality." } },
   // server/management/decision-routes
   { method: "GET", path: "/api/combos/decision-discovery", module: "server/management/decision-routes", mutates: false },
   { method: "POST", path: "/api/combos/decision-test", module: "server/management/decision-routes", mutates: true },
