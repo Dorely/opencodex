@@ -92,10 +92,17 @@ Each entry names the files touched, why, and what a merge must preserve.
   `structure/catalog.md` carries a one-line pointer replacing upstream's "selecting it is not refused".
 - **Claude Code operator models:** `claude-messages.ts` sets `hiddenModelExempt` when an ocx-route pin
   applies or the requested model is one the operator configured for Claude Code
-  (`claudeCode.model`, `smallFastModel`, `tierModels`, `subagentModels`; `isClaudeOperatorModel`),
+  (`claudeCode.model`, `smallFastModel`, `tierModels`; `isClaudeOperatorModel`),
   and passes it to `handleResponses` through `src/server/responses/core-options.ts`, which skips both
   checks in `request-prepare.ts`. Claude Code sends those ids as-is even when they are hidden from the
-  picker, so without this every tier and subagent request would 404.
+  picker, so without this every tier request would 404.
+- **Hidden models leave the subagent roster:** `isHiddenSelector` (in `hidden-models.ts`) is used by
+  `src/codex/subagent-selectable-models.ts` (a hidden saved roster slot is no longer kept in the
+  dashboard's roster list, so the next roster save drops it) and `src/claude/agents-inject.ts`
+  (`buildClaudeAgentDefs` writes no `ocx-*` agent for a hidden slot). Upstream keeps hidden saved
+  slots on purpose to avoid truncating a roster; this fork treats hiding as removal. Combos were
+  already roster entries (`combo/<id>` gives an `ocx-<id>` agent). If upstream reworks either
+  function, keep both filters.
 
 ## Combo quota limits
 

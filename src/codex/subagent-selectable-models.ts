@@ -1,6 +1,7 @@
 import type { OcxConfig } from "../types";
 import { slugEquals } from "../providers/slug-codec";
 import { catalogModelSlug, type CatalogModel } from "./catalog";
+import { isHiddenSelector } from "../routing/hidden-models";
 
 /**
  * The models a subagent can be pinned to: enabled native slugs first, then visible routed
@@ -11,9 +12,12 @@ import { catalogModelSlug, type CatalogModel } from "./catalog";
  * model the picker would offer. A saved roster slot stays representable after its model is
  * disabled elsewhere: the roster UI treats this list as the rows it can render, and a Save of a
  * list missing that slot would silently truncate the persisted roster.
+ *
+ * Fork: a slot whose model or combo is hidden (`disabledModels`) is not kept; hiding a model takes
+ * it off the roster, and the next roster save drops it (see FORK.md).
  */
 export function subagentSelectableModels(
-  config: Pick<OcxConfig, "disabledModels" | "subagentModels">,
+  config: Pick<OcxConfig, "disabledModels" | "subagentModels" | "combos">,
   models: readonly CatalogModel[],
   nativeSlugs: readonly string[],
 ): string[] {
@@ -27,6 +31,6 @@ export function subagentSelectableModels(
   const selectableSet = new Set(selectable);
   return [
     ...selectable,
-    ...[...new Set(config.subagentModels ?? [])].filter(model => !selectableSet.has(model)),
+    ...[...new Set(config.subagentModels ?? [])].filter(model => !selectableSet.has(model) && !isHiddenSelector(config, model)),
   ];
 }

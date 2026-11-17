@@ -7,7 +7,11 @@ import {
   isHiddenModelRequest,
   claudeOperatorModelSelectors,
   isClaudeOperatorModel,
+  isHiddenSelector,
 } from "../../src/routing/hidden-models";
+import { subagentSelectableModels } from "../../src/codex/subagent-selectable-models";
+import { buildClaudeAgentDefs } from "../../src/claude/agents-inject";
+import type { CatalogModel } from "../../src/codex/catalog";
 import type { OcxConfig } from "../../src/types";
 
 // Fork: a hidden (`disabledModels`) model is refused when the client names it, not only omitted
@@ -96,16 +100,52 @@ describe("Claude Code operator models", () => {
     ...extra,
   } as Partial<OcxConfig>);
 
-  test("tier, main and subagent models are exempt, including the [1m] spelling", () => {
+  test("tier and main models are exempt, including the [1m] spelling", () => {
     const cfg = claudeCfg();
     const route = { providerName: "cc", modelId: "claude-opus-5" };
     expect(isClaudeOperatorModel(cfg, "cc/claude-opus-5[1m]", route)).toBe(true);
-    expect(isClaudeOperatorModel(cfg, "cc/deepseek-flash", { providerName: "cc", modelId: "deepseek-flash" })).toBe(true);
   });
 
-  test("a hidden model Claude Code is not configured to use is not exempt", () => {
-    const cfg = claudeCfg({ subagentModels: [] } as Partial<OcxConfig>);
+  test("a hidden subagent roster model is not exempt", () => {
+    const cfg = claudeCfg();
     expect(isClaudeOperatorModel(cfg, "cc/deepseek-flash", { providerName: "cc", modelId: "deepseek-flash" })).toBe(false);
     expect(claudeOperatorModelSelectors(config([]))).toEqual([]);
+  });
+});
+
+describe("hidden models leave the subagent roster", () => {
+  const combos = {
+    expensive: { targets: [{ provider: "cc", model: "claude-opus-5" }] },
+    cheap: { targets: [{ provider: "cc", model: "deepseek-flash" }] },
+    gone: { targets: [{ provider: "cc", model: "deepseek-flash" }] },
+  };
+  const cfg = config(["cc/claude-opus-5", "cc/vendor/Kimi-K3", "combo/gone"], { combos } as Partial<OcxConfig>);
+
+  test("isHiddenSelector matches exact, encoded and combo selectors", () => {
+    expect(isHiddenSelector(cfg, "cc/claude-opus-5")).toBe(true);
+    expect(isHiddenSelector(cfg, "cc/claude-opus-5[1m]")).toBe(true);
+    expect(isHiddenSelector(cfg, "cc/vendor-Kimi-K3")).toBe(true);
+    expect(isHiddenSelector(cfg, "combo/gone")).toBe(true);
+    expect(isHiddenSelector(cfg, "combo/expensive")).toBe(false);
+    expect(isHiddenSelector(cfg, "gpt-6.1-sol")).toBe(false);
+    expect(isHiddenSelector(config([]), "cc/claude-opus-5")).toBe(false);
+  });
+
+  test("the roster picker offers combos and drops hidden saved slots", () => {
+    const models = [
+      { provider: "cc", id: "deepseek-flash" },
+      { provider: "combo", id: "expensive" },
+      { provider: "combo", id: "cheap" },
+    ] as unknown as CatalogModel[];
+    const roster = { ...cfg, subagentModels: ["cc/vendor-Kimi-K3", "combo/expensive", "removed/provider-model"] };
+    expect(subagentSelectableModels(roster, models, ["gpt-6.1-sol"])).toEqual([
+      "gpt-6.1-sol", "cc/deepseek-flash", "combo/expensive", "combo/cheap", "removed/provider-model",
+    ]);
+  });
+
+  test("Claude agent defs cover combos and skip hidden slots", () => {
+    const roster = { ...cfg, subagentModels: ["combo/expensive", "cc/claude-opus-5", "combo/cheap", "combo/gone"] };
+    const names = buildClaudeAgentDefs(roster, {}, "Z:/ocx-test-no-claude-config").map(def => def.name);
+    expect(names).toEqual(["ocx-expensive", "ocx-cheap"]);
   });
 });

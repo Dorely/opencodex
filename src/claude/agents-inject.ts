@@ -12,6 +12,7 @@
  * `ocx-*.md` inside the agents dir. User-authored agents are never touched.
  */
 import { lstatSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { isHiddenSelector } from "../routing/hidden-models";
 import { join } from "node:path";
 import type { OcxConfig } from "../types";
 import { renameAtomicFile } from "../lib/windows-atomic-replace";
@@ -121,6 +122,8 @@ export function buildClaudeAgentDefs(
     ?? (config.subagentModels === undefined ? DEFAULT_SUBAGENT_MODELS : config.subagentModels);
   for (const entry of roster.slice(0, 5)) {
     if (typeof entry !== "string" || !SAFE_AGENT_MODEL_ID.test(entry.trim())) continue;
+    // Fork: a hidden roster slot gets no agent (see FORK.md).
+    if (isHiddenSelector(config, entry)) continue;
     const { alias, id, provider } = entryParts(entry.trim(), config);
     push(sanitizeName(id), alias, `Delegate work to ${id} (${provider}) via opencodex routing. General-purpose worker/explorer on that model. ${NO_MODEL_ARG}`);
   }

@@ -18,7 +18,7 @@
  */
 import { comboDisabledModelSelectors, resolveComboId } from "../combos/identifiers";
 import { OPENAI_CODEX_PROVIDER_ID } from "../providers/openai-tiers-destination";
-import { slugEquals } from "../providers/slug-codec";
+import { slugEquals, slugEquivalenceKey } from "../providers/slug-codec";
 import { SHADOW_SOURCE_MODEL_OPTIONS, shadowSourceModels } from "../lib/shadow-call";
 import type { OcxConfig } from "../types";
 
@@ -92,6 +92,24 @@ export function isHiddenModelRequest(config: OcxConfig, requestedModel: string, 
   return route.providerName === OPENAI_CODEX_PROVIDER_ID && !route.codexAccountNamespace && disabled.has(route.modelId);
 }
 
+/**
+ * Whether a stored selector (a roster slot, a picker id) names a hidden model or combo, without
+ * routing it: an exact `disabledModels` entry, the same routed model in raw or encoded form, or a
+ * hidden combo by any of its selectors.
+ */
+export function isHiddenSelector(config: Pick<OcxConfig, "disabledModels" | "combos">, selector: string): boolean {
+  const disabled = disabledSet(config);
+  const trimmed = withoutContextMarker(selector);
+  if (!disabled || trimmed === "") return false;
+  if (disabled.has(trimmed)) return true;
+  const comboId = resolveComboId(config, trimmed);
+  if (comboId) return comboIsHidden(config, comboId);
+  if (!trimmed.includes("/")) return false;
+  const key = slugEquivalenceKey(trimmed);
+  for (const stored of disabled) if (stored.includes("/") && slugEquivalenceKey(stored) === key) return true;
+  return false;
+}
+
 /** Throw {@link HiddenModelError} when a client-requested selector resolves to a hidden model. */
 export function assertModelNotHidden(config: OcxConfig, requestedModel: string, route: HiddenModelRoute): void {
   if (isHiddenModelRequest(config, requestedModel, route)) throw new HiddenModelError(requestedModel);
@@ -103,18 +121,19 @@ function withoutContextMarker(model: string): string {
 
 /**
  * Models the operator's Claude Code setup chooses (`claudeCode.model`, `smallFastModel`,
- * `tierModels`, `subagentModels`). Claude Code sends these ids itself, so they are operator routes,
- * not client picks, and stay callable when hidden from pickers.
+ * `tierModels`). Claude Code sends these ids itself, so they are operator routes, not client picks,
+ * and stay callable when hidden from pickers. The subagent roster is not on this list: a hidden
+ * roster slot gets no agent and no exemption (`isHiddenSelector`).
  */
-export function claudeOperatorModelSelectors(config: Pick<OcxConfig, "claudeCode" | "subagentModels">): string[] {
+export function claudeOperatorModelSelectors(config: Pick<OcxConfig, "claudeCode">): string[] {
   const cc = config.claudeCode;
-  const raw = [cc?.model, cc?.smallFastModel, ...Object.values(cc?.tierModels ?? {}), ...(config.subagentModels ?? [])];
+  const raw = [cc?.model, cc?.smallFastModel, ...Object.values(cc?.tierModels ?? {})];
   return raw.filter((value): value is string => typeof value === "string" && value.trim() !== "").map(withoutContextMarker);
 }
 
 /** True when a Claude Code request's model is one its operator config selected. */
 export function isClaudeOperatorModel(
-  config: Pick<OcxConfig, "claudeCode" | "subagentModels">,
+  config: Pick<OcxConfig, "claudeCode">,
   requestedModel: string,
   route: Pick<HiddenModelRoute, "providerName" | "modelId">,
 ): boolean {

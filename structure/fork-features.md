@@ -19,8 +19,8 @@ points, never inside `src/router.ts`:
 
 Operator-chosen destinations stay routable: combo targets, policy picks, blocked-model redirect
 targets, fallback chains, subagent fallbacks and compaction. On the Claude Messages lane, a model the
-operator configured for Claude Code (`claudeCode.model`, `smallFastModel`, `tierModels`,
-`subagentModels`, matched raw or with `slugEquals`, ignoring a `[1m]` marker) and any request an
+operator configured for Claude Code (`claudeCode.model`, `smallFastModel`, `tierModels`, matched
+raw or with `slugEquals`, ignoring a `[1m]` marker) and any request an
 ocx-route pin rewrites are exempt too: `claude-messages.ts` skips its own check and passes
 `hiddenModelExempt` so `request-prepare.ts` skips both of its checks. Codex's hard-coded helper and memory
 ids (`SHADOW_SOURCE_MODEL_OPTIONS`, plus configured `shadowCallIntercept.sourceModels`) are never
@@ -29,6 +29,12 @@ refused when requested bare, because Codex sends them without the user picking t
 Matching follows the catalog's own rules: an exact selector, `provider/model` in raw or encoded form
 (`slugEquals`), an account-qualified native id, a bare native id for the canonical OpenAI provider,
 and every selector `comboDisabledModelSelectors` lists for a combo.
+
+A hidden model or combo also leaves the subagent roster. `isHiddenSelector` matches a stored
+selector without routing it (exact entry, raw or encoded `provider/model`, or a hidden combo by any
+selector); `subagentSelectableModels` stops keeping a hidden saved slot in the dashboard's roster
+list, and `buildClaudeAgentDefs` writes no `ocx-*` agent for one. A combo in the roster
+(`combo/expensive`) gets an agent like a model (`ocx-expensive`, model alias resolving to the combo).
 
 ## Combo quota limits
 
