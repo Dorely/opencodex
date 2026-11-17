@@ -1,4 +1,5 @@
 import { normalizeJevQuotaTiers, type ResolvedJevQuotaTiers } from "./jev-quota-config";
+import { comboQuotaLimitIssues, normalizeComboQuotaLimits, type ComboTargetQuotaLimit } from "./quota-limits";
 import {
   JEV_SESSION_PIN_TTL_MAX_MS,
   JEV_SESSION_PIN_TTL_MIN_MS,
@@ -52,6 +53,8 @@ export interface NormalizedComboTarget {
   reasoningEfforts?: OcxComboDefaultEffort[];
   /** Optional JEV decision description. */
   modelProfile?: string;
+  /** Fork: the combo's quota limit for this target's provider (quota-limits.ts). */
+  quotaLimit?: ComboTargetQuotaLimit;
 }
 
 export interface NormalizedComboConfig {
@@ -351,6 +354,7 @@ export function comboConfigIssues(
   if (nativeAlias && (typeof body.displayName !== "string" || body.displayName.trim().length === 0)) {
     issues.push({ path: ["displayName"], message: "displayName is required for native aliases" });
   }
+  for (const issue of comboQuotaLimitIssues(body.quotaLimits)) issues.push({ path: ["quotaLimits", ...issue.path], message: issue.message });
   for (const field of ["decisionQuotaSignals", "decisionQuotaTiers"] as const) {
     if (body[field] === undefined || body[field] === null) continue;
     if (body.strategy !== "jev") issues.push({ path: [field], message: `${field} is only valid with strategy "jev"` });
@@ -569,6 +573,7 @@ export function normalizeComboConfig(raw: OcxComboConfig): NormalizedComboConfig
   const defaultEffort = typeof raw.defaultEffort === "string" && isCodexReasoningEffort(raw.defaultEffort)
     ? raw.defaultEffort
     : null;
+  const quotaLimits = normalizeComboQuotaLimits(raw.quotaLimits);
   return {
     strategy: raw.strategy ?? "failover",
     ...(raw.allowMeteredTargets === true ? { allowMeteredTargets: true } : {}),
@@ -596,7 +601,7 @@ export function normalizeComboConfig(raw: OcxComboConfig): NormalizedComboConfig
     ...(raw.strategy === "jev" && raw.decisionQuotaSignals === true ? { decisionQuotaSignals: true } : {}),
     ...(raw.strategy === "jev" && normalizeJevQuotaTiers(raw.decisionQuotaTiers) ? { decisionQuotaTiers: normalizeJevQuotaTiers(raw.decisionQuotaTiers)! } : {}),
     ...(raw.strategy === "jev" && normalizeJevSessionPin(raw.sessionPin) ? { sessionPin: normalizeJevSessionPin(raw.sessionPin)! } : {}),
-    targets: raw.targets.map(target => ({
+    targets: raw.targets.map(target => withQuotaLimit({
       provider: target.provider.trim(),
       model: target.model.trim(),
       weight: target.weight ?? 1,
@@ -608,8 +613,13 @@ export function normalizeComboConfig(raw: OcxComboConfig): NormalizedComboConfig
         : {}),
       lastResort: target.lastResort === true,
       metered: target.metered === true,
-    })),
+    }, quotaLimits)),
   };
+}
+
+function withQuotaLimit(target: NormalizedComboTarget, limits: Map<string, ComboTargetQuotaLimit>): NormalizedComboTarget {
+  const quotaLimit = limits.get(target.provider);
+  return quotaLimit ? { ...target, quotaLimit: { ...quotaLimit } } : target;
 }
 
 /**

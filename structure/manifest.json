@@ -260,6 +260,18 @@
       ]
     },
     {
+      "path": "fork-features.md",
+      "tier": 2,
+      "title": "Fork features",
+      "scope": "This personal fork's hidden-model refusal and per-combo provider quota limits.",
+      "documents": [
+        "src/routing/hidden-models.ts",
+        "src/combos/quota-limits.ts",
+        "src/combos/quota-limit-check.ts",
+        "src/combos/combo-quota-limit-refresher.ts"
+      ]
+    },
+    {
       "path": "catalog-vendor-context.md",
       "tier": 2,
       "title": "Custom-provider context estimates",

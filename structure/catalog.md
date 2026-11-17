@@ -187,8 +187,8 @@ Without such an alias, a disabled bare native keeps a `visibility: "hide"` row, 
 has an operator-visible consequence. `visibleNativeSlugs` in `src/codex/catalog/metadata.ts` drops
 the slug from `/v1/models` and the dashboard while `applyNativeVisibility` keeps the catalog row, so
 a renderer that ignores `visibility` can still offer a model every other surface calls disabled.
-Selecting it is not refused: `disabledModels` is a catalog control, and `src/router.ts` never
-consults it, so the turn resolves by the ordinary routing rules instead of failing as disabled.
+`src/router.ts` never consults `disabledModels`; this fork refuses a client-named hidden model at the
+request entry points instead, see [hidden model refusal](fork-features.md#hidden-model-refusal).
 Retention is the deliberate trade — it preserves real upstream metadata for a later re-enable
 rather than synthesizing a guess — and a `nativeAlias` combo is the lever that omits the row
 outright.

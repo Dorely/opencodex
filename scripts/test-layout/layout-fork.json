@@ -1,0 +1,4 @@
+{
+  "fork-hidden-models.test.ts": "routing",
+  "fork-combo-quota-limits.test.ts": "routing"
+}

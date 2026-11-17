@@ -60,3 +60,44 @@ Each entry names the files touched, why, and what a merge must preserve.
   flags or env, and none is run without the owner asking): `scripts/openai-provider-option-runtime-smoke.ts`,
   `scripts/steering-smoke.ts`, `scripts/codebuddy-live-acceptance.ts`,
   `scripts/verify-loopback-direct-spawn.mjs`.
+
+## Hidden model refusal
+
+- **Files:** `src/routing/hidden-models.ts` (new); one guarded call each in
+  `src/server/responses/request-prepare.ts` (after `onRequestBodyParsed` captures the client
+  selector, before combo dispatch, and after `resolveRoute`), `src/server/chat-completions.ts` and
+  `src/server/claude-messages.ts` (right after the pre-route `routeModel`). How it behaves:
+  [structure/fork-features.md](structure/fork-features.md#hidden-model-refusal).
+- **Why:** upstream's `disabledModels` only hides models from discovery; a client could still call
+  one by name. Here the client-chosen selector is refused with 404 `Model "<id>" is hidden`.
+- **Merge must preserve:** the checks run at the entry points, never in `src/router.ts`, so combo
+  targets, policy picks, redirects, fallbacks, compaction, shadow/memory routes and Codex helper ids
+  keep routing. If upstream renames `resolveRoute`, `onRequestBodyParsed`, the combo dispatch in
+  `request-prepare.ts`, or the native-lane pre-route, move the calls with it.
+  `structure/catalog.md` carries a one-line pointer replacing upstream's "selecting it is not refused".
+
+## Combo quota limits
+
+- **Files:** `src/combos/quota-limits.ts`, `src/combos/quota-limit-check.ts` and
+  `src/combos/combo-quota-limit-refresher.ts` (new; `quota-limits.ts` must stay cache-free or it
+  creates an import cycle through `src/config.ts`);
+  `src/combos/types.ts` (validation and per-target `quotaLimit`), `src/combos/resolve.ts`
+  (`"quota limit"` exclusion reason), `src/types/config.ts` (`OcxComboConfig.quotaLimits`),
+  `src/server/management/combo-routes.ts` (PUT keeps a stored `quotaLimits` when omitted),
+  `src/server/index/optional-listeners.ts` (refresher start/stop). How it behaves:
+  [structure/fork-features.md](structure/fork-features.md#combo-quota-limits).
+- **Why:** lets a combo stop using a provider once its 5-hour or weekly usage passes a percent,
+  for example `"quotaLimits": [{ "provider": "commandcode", "fiveHourPercent": 50, "weeklyPercent": 50 }]`.
+- **Merge must preserve:** the exclusion lives in `providerExclusionReason`; unknown, stale or reset
+  usage fails open; the refresher runs only while a combo declares a limit. If upstream adds GUI combo
+  editing that rewrites the whole combo, keep `quotaLimits` intact.
+
+## Fork tests, layout and docs
+
+- **Files:** `tests/routing/fork-*.test.ts`, `scripts/test-layout/layout-fork.json` (new, listed in
+  `explicitShards` of `scripts/test-layout/layout.json`), appended entries at the end of
+  `tests/fixtures/test-layout-expected.json`, `structure/fork-features.md` plus its
+  `structure/manifest.json` entry and regenerated `structure/INDEX.md`, one-line pointer in
+  `structure/runtime.md`.
+- **Merge must preserve:** on conflicts in the expected-layout fixture, `manifest.json` or `INDEX.md`,
+  take upstream's side and re-append the fork entries (`bun run structure:index` regenerates INDEX).

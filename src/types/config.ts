@@ -1495,6 +1495,8 @@ export interface OcxComboTarget {
 
 export interface OcxComboConfig {
   targets: OcxComboTarget[];
+  /** Fork: skip a provider's targets while its 5h/weekly usage is above a percent (src/combos/quota-limits.ts). */
+  quotaLimits?: import("../combos/quota-limits").OcxComboQuotaLimit[];
   /** Operator consent for metered targets on a loopback-only proxy. Default false; public listeners still require key consent. */
   allowMeteredTargets?: boolean;
   /** Ordered failover (default), round-robin, weighted random, least-used, or quota reset-window selection. */

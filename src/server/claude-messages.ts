@@ -79,6 +79,7 @@ import {
   CLAUDE_NATIVE_THINKING,
   type ClaudeThinkingProjection,
 } from "../lib/claude-request-projection";
+import { assertModelNotHidden } from "../routing/hidden-models";
 import { captureRouteStaticPolicy, NoEligiblePolicyCandidateError, previewRouteModel, routedProviderConfig, UnknownRoutingPolicyError, routeModel, type RouteResult } from "../router";
 import { evidenceFromBody } from "../routing/request-evidence";
 import { resolveWireProtocolOverride } from "./adapter-resolve";
@@ -936,6 +937,8 @@ async function handleClaudeMessagesWithBudget(
   let directLeaveError: unknown;
   try {
     const route = routeModel(config, internalBody.model as string, directPlan ? directPlan.evidence : evidenceFromBody(internalBody));
+    // Fork: a hidden model skips the native lane; the Responses path below refuses it.
+    assertModelNotHidden(config, internalBody.model as string, route);
     // Settle the wire once so the sampling decision below reads the effective
     // adapter rather than the provider-wide default (#404).
     route.staticPolicy = captureRouteStaticPolicy(

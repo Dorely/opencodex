@@ -14,6 +14,7 @@ import {
   type ComboFailureCooldownScope,
 } from "./failover";
 import { quotaResetRemainingMs } from "./reset-window";
+import { comboTargetQuotaLimitExceeded } from "./quota-limit-check";
 import { getCombo, resolveComboId, targetKey } from "./types";
 import type { NormalizedComboConfig, NormalizedComboTarget } from "./types";
 import {
@@ -119,15 +120,14 @@ export class NoAvailableComboTargetsError extends Error {
   }
 }
 
-type ComboExclusionReason = "provider missing" | "provider disabled" | "quota exhausted" | "cooldown" | "ineligible for this request";
+type ComboExclusionReason = "provider missing" | "provider disabled" | "quota exhausted" | "quota limit" | "cooldown" | "ineligible for this request";
 
-function providerExclusionReason(config: OcxConfig, target: OcxComboTarget, now: number): ComboExclusionReason | undefined {
+function providerExclusionReason(config: OcxConfig, target: OcxComboTarget | NormalizedComboTarget, now: number): ComboExclusionReason | undefined {
   const provider = Object.hasOwn(config.providers, target.provider) ? config.providers[target.provider] : undefined;
   if (!provider) return "provider missing";
   if (provider.disabled === true) return "provider disabled";
-  return cachedProviderQuotaIsExhausted(getCachedProviderRoutingQuota(target.provider, provider, now), now, target.model)
-    ? "quota exhausted"
-    : undefined;
+  if (cachedProviderQuotaIsExhausted(getCachedProviderRoutingQuota(target.provider, provider, now), now, target.model)) return "quota exhausted";
+  return comboTargetQuotaLimitExceeded(config, target, now) ? "quota limit" : undefined;
 }
 
 function targetProviderIsUsable(config: OcxConfig, target: OcxComboTarget, now: number): boolean {
@@ -143,7 +143,8 @@ export function comboTargetSkipTrigger(
   target: OcxComboTarget,
   now = Date.now(),
 ): "quota_exhausted" | "unavailable" {
-  return providerExclusionReason(config, target, now) === "quota exhausted" ? "quota_exhausted" : "unavailable";
+  const reason = providerExclusionReason(config, target, now);
+  return reason === "quota exhausted" || reason === "quota limit" ? "quota_exhausted" : "unavailable";
 }
 
 /**
@@ -152,7 +153,7 @@ export function comboTargetSkipTrigger(
  * other or missing status is transient.
  */
 function exclusionCause(reason: ComboExclusionReason, comboId: string, target: OcxComboTarget, now: number): ComboTargetUnavailableCause {
-  if (reason === "quota exhausted") return "quota";
+  if (reason === "quota exhausted" || reason === "quota limit") return "quota";
   if (reason === "ineligible for this request") return "unsupported";
   if (reason !== "cooldown") return "unavailable";
   const status = comboTargetCooldownStatus(comboId, target, now);

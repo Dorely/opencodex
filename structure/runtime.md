@@ -416,7 +416,7 @@ reset-window ordering and catalog inactivity. Changing a key, destination or ada
 the old binding; restoring the same configuration may reuse still-fresh evidence. Account admission,
 cooldowns and response-driven retry retain [structured-code provenance](transports/responses-combo-boundaries.md#upstream-account-quota-exhaustion-failover); free-tier validation prose is not provider-wide exhaustion.
 Per-key selection in `src/providers/quota-key-accounts.ts` and `src/providers/key-failover.ts` uses the producer's inference projection, bound to each key and rechecked against current authentication and destination. Display retains Synthetic search and Mistral budgets; missing proof, expired evidence and failed probes are unknown for selection, while bounded last-good display survives transient failure. Selection never probes.
-The management quota DTO keeps Combo editing aligned with scoped inference evidence;
+This fork's per-combo provider ceilings also exclude targets; see [combo quota limits](fork-features.md#combo-quota-limits). The management quota DTO keeps Combo editing aligned with scoped inference evidence;
 see [Combo editor routing quota](dashboard-and-usage.md#combo-editor-routing-quota). JEV separately reads bounded loaded-only advisory snapshots, never this credential-resolving getter; publication, opt-in and privacy follow [loaded advisory quota](providers/jev-decision.md#loaded-advisory-quota).
 
 Canonical Spark Lite metadata follows the final serialized model and surviving nonempty Lite tool catalog; see [Responses transport](transports/responses.md).

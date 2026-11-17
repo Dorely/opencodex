@@ -1755,5 +1755,6 @@
   "link-relay-wait-observer.test.ts": "clients",
   "responses-offline-resend.test.ts": "responses",
   "link-ws-autobahn.test.ts": "clients",
-  "routing-profile-types-reexport.test.ts": "config"
+  "routing-profile-types-reexport.test.ts": "config",
+  "fork-hidden-models.test.ts": "routing", "fork-combo-quota-limits.test.ts": "routing"
 }

@@ -111,6 +111,7 @@ import { parseSyntheticRowId } from "./fast-row";
 import { isCanonicalOpenAiForwardProvider } from "../providers/openai-tiers";
 import { CODEX_RESERVE_HELPER_UNSUPPORTED_MESSAGE, isCodexReserveHelperUnsupported } from "../codex/loopback-target";
 import { applyDroidReasoningDefault, droidReasoningDefault, DROID_DEFAULT_EFFORT_HEADER } from "./droid-reasoning-default";
+import { assertModelNotHidden } from "../routing/hidden-models";
 
 type Rec = Record<string, unknown>;
 
@@ -251,6 +252,8 @@ async function handleChatCompletionsWithBudget(
   let nativeDecline: ProtocolReasonCode | undefined = "unknown-model";
   try {
     const route = routeModel(config, chatBody.model as string, evidenceFromBody(chatBody));
+    // Fork: a hidden model skips the native lane; the Responses path below refuses it.
+    assertModelNotHidden(config, chatBody.model as string, route);
     // Preserve the routed destination for Go recognition, then settle the wire before
     // deriving protocol-scoped affinity. Recognition must not inspect the flipped adapter.
     const routedProvider = route.provider;

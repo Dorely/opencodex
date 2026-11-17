@@ -23,6 +23,7 @@ import { linkChildParityRouteAllowed } from "../../link/child-parity";
 import { saveConfigPreservingClaudeCode } from "../../config/live-reconcile";
 import { reconcileLiveStateStores } from "../../lib/state-store-registrations";
 import { startJevQuotaActivation } from "../../combos/jev-quota-activation";
+import { startComboQuotaLimitRefresher } from "../../combos/combo-quota-limit-refresher";
 import { createLocalControlListener } from "./local-control-listener";
 import { createCatalogPullRecorder, type CatalogPull, type CatalogPullRecorder } from "../../link/child-catalog-freshness";
 import type { LinkActivitySnapshot } from "../../link/child-activity";
@@ -103,6 +104,7 @@ export function createOptionalListenerSet<T>(linkDeps: LinkListenerDeps = {},
   const localControl = createLocalControlListener<T>();
   let activeConfig: OcxConfig | undefined;
   let stopJevQuotaActivation: (() => void) | undefined;
+  let stopComboQuotaLimitRefresher: (() => void) | undefined;
   // Readiness proofs of multi-route candidates: registered by the supervisor, admitted by the
   // hub-link catalog admission below, valid only under the link's current tunnel generation.
   const routeProofs = createRouteProofRegistry({ generationOf: linkId => supervisor.connectionGeneration?.(linkId) });
@@ -237,6 +239,7 @@ export function createOptionalListenerSet<T>(linkDeps: LinkListenerDeps = {},
       });
       // Last, after every listener started: JEV advisory quota follows the live config while serving.
       stopJevQuotaActivation = startJevQuotaActivation(ctx.config);
+      stopComboQuotaLimitRefresher = startComboQuotaLimitRefresher(ctx.config);
     },
     abortStart() {
       try { localControl.abort(); } catch { /* the startup error is the one worth reporting */ }
@@ -276,6 +279,8 @@ export function createOptionalListenerSet<T>(linkDeps: LinkListenerDeps = {},
       catalogPulls?.flush();
       stopJevQuotaActivation?.();
       stopJevQuotaActivation = undefined;
+      stopComboQuotaLimitRefresher?.();
+      stopComboQuotaLimitRefresher = undefined;
       if (failure) throw failure;
     },
   };

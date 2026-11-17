@@ -235,6 +235,8 @@ export async function handleComboRoutes(ctx: ManagementContext): Promise<Respons
       ...(!Object.hasOwn(requestedCombo, "decisionQuotaTiers") && requestedCombo.strategy === "jev" && previous?.decisionQuotaTiers !== undefined ? { decisionQuotaTiers: previous.decisionQuotaTiers } : {}),
       // The dashboard does not edit the session pin (#7525): an omitted field keeps it on a JEV save.
       ...(!Object.hasOwn(requestedCombo, "sessionPin") && requestedCombo.strategy === "jev" && previous?.sessionPin != null ? { sessionPin: previous.sessionPin } : {}),
+      // Fork: the dashboard does not edit quota limits, so a round trip that omits them keeps them.
+      ...(!Object.hasOwn(requestedCombo, "quotaLimits") && previous?.quotaLimits !== undefined ? { quotaLimits: previous.quotaLimits } : {}),
       ...(!Object.hasOwn(requestedCombo, "allowMeteredTargets") && previous?.allowMeteredTargets === true
         ? { allowMeteredTargets: true }
         : {}),
