@@ -420,7 +420,7 @@ export async function prepareResponsesRequest(
     return markProxyError(formatErrorResponse(400, "invalid_request_error", "A JEV decision model cannot be a JEV combo"));
   }
   if (comboId && Object.hasOwn(config.combos ?? {}, comboId)) {
-    if (clientRequestedModel !== undefined
+    if (clientRequestedModel !== undefined && !options.hiddenModelExempt
       && hiddenRequestedComboId(config, comboRows.fastRow?.baseId ?? comboEffortRow?.baseId ?? clientRequestedModel) === comboId) {
       return formatErrorResponse(404, "invalid_request_error", new HiddenModelError(clientRequestedModel).message);
     }
@@ -858,7 +858,7 @@ export async function prepareResponsesRequest(
     route = memoryRoute ?? shadowRoute ?? resolveRoute(options.policyFallbackCandidate
       ? `${options.policyFallbackCandidate.provider}/${options.policyFallbackCandidate.model}` : parsed.modelId);
     // Fork: refuse a hidden model the client named itself; operator-chosen routes pass (src/routing/hidden-models.ts).
-    if (clientRequestedModel !== undefined && !memoryRoute && !shadowRoute && !options.mainHardLockFallbackOverride
+    if (clientRequestedModel !== undefined && !options.hiddenModelExempt && !memoryRoute && !shadowRoute && !options.mainHardLockFallbackOverride
       && !options.compactionRoutingOverride && parsed._compactionRequest !== true) assertModelNotHidden(config, parsed.modelId, route);
     // Selection-free hard-lock preflight grants no hop. Enforce the actual ranked destination
     // against the locked source before admitting this first selection.

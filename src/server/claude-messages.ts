@@ -79,7 +79,7 @@ import {
   CLAUDE_NATIVE_THINKING,
   type ClaudeThinkingProjection,
 } from "../lib/claude-request-projection";
-import { assertModelNotHidden } from "../routing/hidden-models";
+import { assertModelNotHidden, isClaudeOperatorModel } from "../routing/hidden-models";
 import { captureRouteStaticPolicy, NoEligiblePolicyCandidateError, previewRouteModel, routedProviderConfig, UnknownRoutingPolicyError, routeModel, type RouteResult } from "../router";
 import { evidenceFromBody } from "../routing/request-evidence";
 import { resolveWireProtocolOverride } from "./adapter-resolve";
@@ -662,6 +662,7 @@ async function handleClaudeMessagesWithBudget(
   const nativeReasoningMint: { owner?: NativeReasoningOwner } = {};
   let nativeProjectionOnlyError: AnthropicRequestError | undefined;
   let effortOverride: string | null = null;
+  let hiddenModelExempt = false;
   let effortRow: ParsedEffortRowId | null = null;
   let fastRow: ParsedFastRowId | null = null;
   let requestedModel = "";
@@ -692,6 +693,7 @@ async function handleClaudeMessagesWithBudget(
     if (isRec(anthropicBody)) {
       const routeOverride = extractOcxRouteDirective(anthropicBody);
       if (routeOverride && typeof anthropicBody.model === "string") {
+        hiddenModelExempt = true; // Fork: an injected agent's ocx-route pin is operator config.
         anthropicBody.model = stripOneMillionMarker(routeOverride);
         effortOverride = extractOcxEffortDirective(anthropicBody);
       }
@@ -937,8 +939,10 @@ async function handleClaudeMessagesWithBudget(
   let directLeaveError: unknown;
   try {
     const route = routeModel(config, internalBody.model as string, directPlan ? directPlan.evidence : evidenceFromBody(internalBody));
-    // Fork: a hidden model skips the native lane; the Responses path below refuses it.
-    assertModelNotHidden(config, internalBody.model as string, route);
+    // Fork: a hidden model skips the native lane; the Responses path below refuses it. Models the
+    // operator's Claude Code config selects (tier slots, subagent pins) are not client picks.
+    hiddenModelExempt ||= isClaudeOperatorModel(config, internalBody.model as string, route);
+    if (!hiddenModelExempt) assertModelNotHidden(config, internalBody.model as string, route);
     // Settle the wire once so the sampling decision below reads the effective
     // adapter rather than the provider-wide default (#404).
     route.staticPolicy = captureRouteStaticPolicy(
@@ -1276,6 +1280,7 @@ async function handleClaudeMessagesWithBudget(
     // over, and TTL-less breakpoints take the destination default.
     cacheRetention: config.cacheRetention ?? callerCacheRetention(anthropicBody),
   }), logCtx, {
+    ...(hiddenModelExempt ? { hiddenModelExempt: true } : {}),
     ...(nativeComboSource && envelope && settledRoute?.combo ? {
       protocolSource: (await import("./messages-native")).createNativeMessagesComboSource({
         req, config, logCtx, envelope, requestedModel, translatorBudget, selector: nativeSelector, admission: logIds?.admission,

@@ -5,6 +5,8 @@ import {
   hiddenRequestedComboId,
   HiddenModelError,
   isHiddenModelRequest,
+  claudeOperatorModelSelectors,
+  isClaudeOperatorModel,
 } from "../../src/routing/hidden-models";
 import type { OcxConfig } from "../../src/types";
 
@@ -84,5 +86,26 @@ describe("hidden model refusal", () => {
     const byAlias = config(["cheap"], { combos } as Partial<OcxConfig>);
     expect(hiddenRequestedComboId(byAlias, "cheap")).toBe("Cheap");
     expect(hiddenRequestedComboId(byAlias, "combo/Cheap")).toBe("Cheap");
+  });
+});
+
+describe("Claude Code operator models", () => {
+  const claudeCfg = (extra: Partial<OcxConfig> = {}) => config(["cc/claude-opus-5", "cc/deepseek-flash"], {
+    claudeCode: { model: "cc/claude-opus-5", tierModels: { opus: "cc/claude-opus-5" } },
+    subagentModels: ["cc/deepseek-flash"],
+    ...extra,
+  } as Partial<OcxConfig>);
+
+  test("tier, main and subagent models are exempt, including the [1m] spelling", () => {
+    const cfg = claudeCfg();
+    const route = { providerName: "cc", modelId: "claude-opus-5" };
+    expect(isClaudeOperatorModel(cfg, "cc/claude-opus-5[1m]", route)).toBe(true);
+    expect(isClaudeOperatorModel(cfg, "cc/deepseek-flash", { providerName: "cc", modelId: "deepseek-flash" })).toBe(true);
+  });
+
+  test("a hidden model Claude Code is not configured to use is not exempt", () => {
+    const cfg = claudeCfg({ subagentModels: [] } as Partial<OcxConfig>);
+    expect(isClaudeOperatorModel(cfg, "cc/deepseek-flash", { providerName: "cc", modelId: "deepseek-flash" })).toBe(false);
+    expect(claudeOperatorModelSelectors(config([]))).toEqual([]);
   });
 });

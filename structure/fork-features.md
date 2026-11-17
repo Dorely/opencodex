@@ -18,7 +18,11 @@ points, never inside `src/router.ts`:
   pre-route, so a hidden model never takes a native lane and falls through to the Responses refusal.
 
 Operator-chosen destinations stay routable: combo targets, policy picks, blocked-model redirect
-targets, fallback chains, subagent fallbacks and compaction. Codex's hard-coded helper and memory
+targets, fallback chains, subagent fallbacks and compaction. On the Claude Messages lane, a model the
+operator configured for Claude Code (`claudeCode.model`, `smallFastModel`, `tierModels`,
+`subagentModels`, matched raw or with `slugEquals`, ignoring a `[1m]` marker) and any request an
+ocx-route pin rewrites are exempt too: `claude-messages.ts` skips its own check and passes
+`hiddenModelExempt` so `request-prepare.ts` skips both of its checks. Codex's hard-coded helper and memory
 ids (`SHADOW_SOURCE_MODEL_OPTIONS`, plus configured `shadowCallIntercept.sourceModels`) are never
 refused when requested bare, because Codex sends them without the user picking them.
 
@@ -32,7 +36,7 @@ A combo may declare `quotaLimits`, a list of `{ provider, fiveHourPercent?, week
 (each 0..100, at least one window, one entry per provider), validated by `comboConfigIssues` through
 `comboQuotaLimitIssues` in `src/combos/quota-limits.ts`, which must not import the quota cache
 (the config facade loads it); the cache-reading check is `src/combos/quota-limit-check.ts`. `normalizeComboConfig` attaches the entry to
-each of that provider's targets as `quotaLimit`.
+each of that provider's targets as `quotaLimit` and keeps the sorted list as the combo's `quotaLimits`.
 
 `providerExclusionReason` in `src/combos/resolve.ts` excludes a target whose provider's usage is
 strictly above a limit, with the reason `quota limit`; `combo_unavailable` diagnostics classify it as
@@ -47,5 +51,8 @@ time has passed never exclude. Because upstream refreshes quota only for the das
 non-forced `fetchProviderQuotaReports` every five minutes while any combo declares a limit, and is
 idle otherwise.
 
-The management combo save keeps a stored `quotaLimits` when the request omits the field, since the
-dashboard does not edit it.
+The dashboard's combo detail panel edits the limits (`gui/src/fork/ComboQuotaLimitsField.tsx`): one
+row per distinct target provider with 5-hour and weekly percent inputs, blank meaning no cutoff. The
+save body carries `quotaLimits` only when the combo has one, filtered to providers it still targets.
+The management combo save stores the combo-level list, never the per-target `quotaLimit`, keeps a
+stored list when the request omits the field, and clears it on an empty array.

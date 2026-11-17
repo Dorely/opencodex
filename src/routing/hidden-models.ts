@@ -96,3 +96,29 @@ export function isHiddenModelRequest(config: OcxConfig, requestedModel: string, 
 export function assertModelNotHidden(config: OcxConfig, requestedModel: string, route: HiddenModelRoute): void {
   if (isHiddenModelRequest(config, requestedModel, route)) throw new HiddenModelError(requestedModel);
 }
+
+function withoutContextMarker(model: string): string {
+  return model.trim().replace(/\[1m\]$/i, "");
+}
+
+/**
+ * Models the operator's Claude Code setup chooses (`claudeCode.model`, `smallFastModel`,
+ * `tierModels`, `subagentModels`). Claude Code sends these ids itself, so they are operator routes,
+ * not client picks, and stay callable when hidden from pickers.
+ */
+export function claudeOperatorModelSelectors(config: Pick<OcxConfig, "claudeCode" | "subagentModels">): string[] {
+  const cc = config.claudeCode;
+  const raw = [cc?.model, cc?.smallFastModel, ...Object.values(cc?.tierModels ?? {}), ...(config.subagentModels ?? [])];
+  return raw.filter((value): value is string => typeof value === "string" && value.trim() !== "").map(withoutContextMarker);
+}
+
+/** True when a Claude Code request's model is one its operator config selected. */
+export function isClaudeOperatorModel(
+  config: Pick<OcxConfig, "claudeCode" | "subagentModels">,
+  requestedModel: string,
+  route: Pick<HiddenModelRoute, "providerName" | "modelId">,
+): boolean {
+  const requested = withoutContextMarker(requestedModel);
+  return claudeOperatorModelSelectors(config).some(selector =>
+    selector === requested || slugEquals(selector, route.providerName, route.modelId));
+}

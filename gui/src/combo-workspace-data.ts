@@ -5,6 +5,7 @@
 
 import { SUPPORTED_NATIVE_OPENAI_SLUGS } from "../../src/codex/catalog/native-models";
 import { PROVIDER_QUOTA_MAX_AGE_MS } from "../../src/providers/quota-types";
+import { parseComboQuotaLimits, quotaLimitsEqual, quotaLimitsForSave, type ComboQuotaLimitDraft } from "./fork/combo-quota-limits";
 import { normalizeJevSessionPin, type JevSessionPinConfig } from "../../src/combos/jev-session-pin-config";
 import type { TKey } from "./i18n/shared";
 import {
@@ -174,6 +175,8 @@ export interface ComboItem {
   decisionTimeoutMs?: number | null;
   /** `jev` only: undefined preserves an omitted setting; null explicitly turns the pin off. */
   sessionPin?: JevSessionPinConfig | null;
+  /** Fork: per-provider quota cutoffs (`src/combos/quota-limits.ts`). */
+  quotaLimits?: ComboQuotaLimitDraft[];
   targets: ComboTarget[];
 }
 
@@ -322,6 +325,7 @@ export function parseComboList(payload: unknown): ComboItem[] {
       ...(decisionModel !== null ? { decisionModel } : {}),
       ...(decisionTimeoutMs !== null ? { decisionTimeoutMs } : {}),
       ...(sessionPin !== undefined ? { sessionPin } : {}),
+      ...(parseComboQuotaLimits(r.quotaLimits).length ? { quotaLimits: parseComboQuotaLimits(r.quotaLimits) } : {}),
       targets,
     });
   }
@@ -500,6 +504,7 @@ export function draftEquals(a: ComboItem, b: ComboItem): boolean {
       || (a.sessionPin?.ttlMs ?? null) !== (b.sessionPin?.ttlMs ?? null)
     ))
   ) return false;
+  if (!quotaLimitsEqual(a.quotaLimits, b.quotaLimits)) return false;
   if (a.targets.length !== b.targets.length) return false;
   return a.targets.every((t, i) => {
     const o = b.targets[i]!;
@@ -532,6 +537,7 @@ export function toPutBody(
     decisionModel?: string | null;
     decisionTimeoutMs?: number | null;
     sessionPin?: JevSessionPinConfig | null;
+    quotaLimits?: ComboQuotaLimitDraft[];
   };
 } {
   const weighted = item.strategy === "round-robin" || item.strategy === "random";
@@ -558,6 +564,9 @@ export function toPutBody(
       // Storage stays sparse: the server drops the defaults before persisting.
       imageInput: item.imageInput === "disabled" ? "disabled" : "auto",
       reasoningEffortMode: item.reasoningEffortMode === "adaptive" ? "adaptive" : "strict",
+      // Fork: sent once the combo has or had cutoffs, so clearing them all (an empty list, which the
+      // server drops) takes effect; an untouched combo keeps upstream's exact body.
+      ...(item.quotaLimits !== undefined ? { quotaLimits: quotaLimitsForSave(item.quotaLimits, item.targets) } : {}),
       ...(item.strategy === "round-robin" ? { stickyLimit: item.stickyLimit } : {}),
       ...(item.alias && item.alias.trim() ? { alias: item.alias.trim() } : {}),
       ...(item.nativeAlias ? { nativeAlias: true } : {}),

@@ -1,5 +1,5 @@
 import { normalizeJevQuotaTiers, type ResolvedJevQuotaTiers } from "./jev-quota-config";
-import { comboQuotaLimitIssues, normalizeComboQuotaLimits, type ComboTargetQuotaLimit } from "./quota-limits";
+import { comboQuotaLimitList, comboQuotaLimitIssues, normalizeComboQuotaLimits, type ComboTargetQuotaLimit } from "./quota-limits";
 import {
   JEV_SESSION_PIN_TTL_MAX_MS,
   JEV_SESSION_PIN_TTL_MIN_MS,
@@ -58,6 +58,8 @@ export interface NormalizedComboTarget {
 }
 
 export interface NormalizedComboConfig {
+  /** Fork: per-provider quota cutoffs in stored form; runtime reads each target's `quotaLimit`. */
+  quotaLimits?: import("./quota-limits").OcxComboQuotaLimit[];
   /** Operator consent, effective only on a loopback-only proxy. */
   allowMeteredTargets?: boolean;
   strategy: OcxComboStrategy;
@@ -601,6 +603,7 @@ export function normalizeComboConfig(raw: OcxComboConfig): NormalizedComboConfig
     ...(raw.strategy === "jev" && raw.decisionQuotaSignals === true ? { decisionQuotaSignals: true } : {}),
     ...(raw.strategy === "jev" && normalizeJevQuotaTiers(raw.decisionQuotaTiers) ? { decisionQuotaTiers: normalizeJevQuotaTiers(raw.decisionQuotaTiers)! } : {}),
     ...(raw.strategy === "jev" && normalizeJevSessionPin(raw.sessionPin) ? { sessionPin: normalizeJevSessionPin(raw.sessionPin)! } : {}),
+    ...(quotaLimits.size ? { quotaLimits: comboQuotaLimitList(quotaLimits) } : {}),
     targets: raw.targets.map(target => withQuotaLimit({
       provider: target.provider.trim(),
       model: target.model.trim(),

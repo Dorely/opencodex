@@ -270,6 +270,8 @@ export interface HandleResponsesOptions {
   compactionRoutingOverride?: CompactionRoutingOverride | null;
   /** Internal handoff: the hard-lock fallback rewrote this turn; the log shows `sourceModel`. */
   mainHardLockFallbackOverride?: MainHardLockFallbackOverride | null;
+  /** Fork: the model was chosen by operator config (Claude Code tier/subagent), so a hidden one still routes. */
+  hiddenModelExempt?: boolean;
   /** Internal combo handoff for one parent-validated continuation snapshot. */
   comboReplaySnapshot?: {
     sourceBody: unknown;

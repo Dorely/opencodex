@@ -235,7 +235,7 @@ export async function handleComboRoutes(ctx: ManagementContext): Promise<Respons
       ...(!Object.hasOwn(requestedCombo, "decisionQuotaTiers") && requestedCombo.strategy === "jev" && previous?.decisionQuotaTiers !== undefined ? { decisionQuotaTiers: previous.decisionQuotaTiers } : {}),
       // The dashboard does not edit the session pin (#7525): an omitted field keeps it on a JEV save.
       ...(!Object.hasOwn(requestedCombo, "sessionPin") && requestedCombo.strategy === "jev" && previous?.sessionPin != null ? { sessionPin: previous.sessionPin } : {}),
-      // Fork: the dashboard does not edit quota limits, so a round trip that omits them keeps them.
+      // Fork: an API client that omits quota limits keeps them; the dashboard always sends them.
       ...(!Object.hasOwn(requestedCombo, "quotaLimits") && previous?.quotaLimits !== undefined ? { quotaLimits: previous.quotaLimits } : {}),
       ...(!Object.hasOwn(requestedCombo, "allowMeteredTargets") && previous?.allowMeteredTargets === true
         ? { allowMeteredTargets: true }
@@ -319,6 +319,8 @@ export async function handleComboRoutes(ctx: ManagementContext): Promise<Respons
         ? { decisionTimeoutMs: previous.decisionTimeoutMs }
         : {}),
     };
+    // Fork: an empty quota-limit list (the dashboard clearing every cutoff) is stored as absent.
+    if (Array.isArray(effectiveCombo.quotaLimits) && effectiveCombo.quotaLimits.length === 0) delete effectiveCombo.quotaLimits;
     const nextCombos = { ...(config.combos ?? {}) };
     if (renameFrom) delete nextCombos[renameFrom];
     nextCombos[id] = effectiveCombo as unknown as OcxComboConfig;
@@ -423,7 +425,8 @@ export async function handleComboRoutes(ctx: ManagementContext): Promise<Respons
       // would add a noise key to every target of every combo, including ones that never use
       // the policy (#5736). Only the opt-in value is stored, matching how the combo-level
       // policy is handled in sparseComboConfig.
-      targets: normalizedBase.targets.map(({ lastResort, metered, modelProfile, ...target }) => ({
+      // Fork: `quotaLimit` is the runtime copy of the combo-level `quotaLimits`; never stored per target.
+      targets: normalizedBase.targets.map(({ lastResort, metered, modelProfile, quotaLimit: _quotaLimit, ...target }) => ({
         ...target,
         ...(lastResort ? { lastResort: true } : {}),
         ...(metered ? { metered: true } : {}),

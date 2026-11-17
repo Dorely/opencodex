@@ -20,6 +20,7 @@ import { COMBO_STRATEGY_HINT_KEYS, COMBO_TARGETS_HINT_KEYS } from "../combo-work
 import { clampedNumberInput, comboDraftErrorText } from "./combo-workspace-utils";
 import type { JevDecisionRow } from "../jev-decision-service";
 import { JevStatsPanel } from "./jev-stats-panel";
+import { ComboQuotaLimitsField } from "../fork/ComboQuotaLimitsField";
 import { ComboProtocolPlan } from "./protocols/ComboProtocolPlan";
 
 type DetailTab = "config" | "stats" | "about";
@@ -106,7 +107,7 @@ export function DetailPanel({
   const [copied, setCopied] = useState(false);
   const dirty = !draftEquals(draft, baseline);
   const allTargetsExhausted = comboQuotaState(draft.targets, providerQuotaStates, providerMap) === "exhausted";
-  const baselineSyncKey = JSON.stringify([baseline.id, baseline.alias, baseline.nativeAlias, baseline.displayName, baseline.strategy, baseline.stickyLimit, baseline.defaultEffort, baseline.imageInput, baseline.reasoningEffortMode, baseline.decisionProvider, baseline.decisionModel, baseline.decisionTimeoutMs, baseline.sessionPin === undefined, baseline.sessionPin, baseline.targets.map(t => [t.provider, t.model, t.weight, t.reasoningEfforts, t.modelProfile])]);
+  const baselineSyncKey = JSON.stringify([baseline.id, baseline.alias, baseline.nativeAlias, baseline.displayName, baseline.strategy, baseline.stickyLimit, baseline.defaultEffort, baseline.imageInput, baseline.reasoningEffortMode, baseline.decisionProvider, baseline.decisionModel, baseline.decisionTimeoutMs, baseline.sessionPin === undefined, baseline.sessionPin, baseline.quotaLimits, baseline.targets.map(t => [t.provider, t.model, t.weight, t.reasoningEfforts, t.modelProfile])]);
   const effortMap = useMemo(() => {
     const map = new Map<string, string[] | undefined>();
     for (const model of capabilityModels) {
@@ -402,6 +403,12 @@ export function DetailPanel({
                 {t(COMBO_TARGETS_HINT_KEYS[draft.strategy])}
               </p>
             </div>
+            <ComboQuotaLimitsField
+              targets={draft.targets}
+              limits={draft.quotaLimits}
+              disabled={busy}
+              onChange={(quotaLimits) => updateDraft((d) => ({ ...d, quotaLimits }))}
+            />
             <ComboCapabilities
               targets={draft.targets}
               models={capabilityModels}

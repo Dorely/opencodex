@@ -90,6 +90,12 @@ Each entry names the files touched, why, and what a merge must preserve.
   keep routing. If upstream renames `resolveRoute`, `onRequestBodyParsed`, the combo dispatch in
   `request-prepare.ts`, or the native-lane pre-route, move the calls with it.
   `structure/catalog.md` carries a one-line pointer replacing upstream's "selecting it is not refused".
+- **Claude Code operator models:** `claude-messages.ts` sets `hiddenModelExempt` when an ocx-route pin
+  applies or the requested model is one the operator configured for Claude Code
+  (`claudeCode.model`, `smallFastModel`, `tierModels`, `subagentModels`; `isClaudeOperatorModel`),
+  and passes it to `handleResponses` through `src/server/responses/core-options.ts`, which skips both
+  checks in `request-prepare.ts`. Claude Code sends those ids as-is even when they are hidden from the
+  picker, so without this every tier and subagent request would 404.
 
 ## Combo quota limits
 
@@ -99,17 +105,25 @@ Each entry names the files touched, why, and what a merge must preserve.
   `src/combos/types.ts` (validation and per-target `quotaLimit`), `src/combos/resolve.ts`
   (`"quota limit"` exclusion reason), `src/types/config.ts` (`OcxComboConfig.quotaLimits`),
   `src/server/management/combo-routes.ts` (PUT keeps a stored `quotaLimits` when omitted),
-  `src/server/index/optional-listeners.ts` (refresher start/stop). How it behaves:
+  `src/server/index/optional-listeners.ts` (refresher start/stop). Dashboard editor:
+  `gui/src/fork/combo-quota-limits.ts` and `gui/src/fork/ComboQuotaLimitsField.tsx` (new, English-only
+  copy so the eleven locale catalogs stay untouched), plus small edits in
+  `gui/src/combo-workspace-data.ts` (parse, compare, and send a sparse `quotaLimits`) and
+  `gui/src/components/combo-workspace-detail-panel.tsx` (renders the field, baseline sync key).
+  `normalizeComboConfig` also keeps the combo-level list (`quotaLimits`) so the PUT route stores it
+  there; the route strips the per-target `quotaLimit` before storing. How it behaves:
   [structure/fork-features.md](structure/fork-features.md#combo-quota-limits).
 - **Why:** lets a combo stop using a provider once its 5-hour or weekly usage passes a percent,
   for example `"quotaLimits": [{ "provider": "commandcode", "fiveHourPercent": 50, "weeklyPercent": 50 }]`.
 - **Merge must preserve:** the exclusion lives in `providerExclusionReason`; unknown, stale or reset
-  usage fails open; the refresher runs only while a combo declares a limit. If upstream adds GUI combo
-  editing that rewrites the whole combo, keep `quotaLimits` intact.
+  usage fails open; the refresher runs only while a combo declares a limit. The dashboard sends
+  `quotaLimits` only when the combo has one, because upstream GUI tests assert the exact save body; if
+  upstream reshapes the combo editor or its save body, move the field and the sparse send with it.
 
 ## Fork tests, layout and docs
 
-- **Files:** `tests/routing/fork-*.test.ts`, `scripts/test-layout/layout-fork.json` (new, listed in
+- **Files:** `tests/routing/fork-*.test.ts`, `tests/gui/fork-*.test.ts`,
+  `scripts/test-layout/layout-fork.json` (new, listed in
   `explicitShards` of `scripts/test-layout/layout.json`), appended entries at the end of
   `tests/fixtures/test-layout-expected.json`, `structure/fork-features.md` plus its
   `structure/manifest.json` entry and regenerated `structure/INDEX.md`, one-line pointer in

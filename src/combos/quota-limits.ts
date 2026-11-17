@@ -88,6 +88,11 @@ export function normalizeComboQuotaLimits(raw: unknown): Map<string, ComboTarget
   return out;
 }
 
+/** The stored (combo-level) form of normalized limits, sorted by provider. */
+export function comboQuotaLimitList(limits: Map<string, ComboTargetQuotaLimit>): OcxComboQuotaLimit[] {
+  return [...limits].sort(([a], [b]) => a.localeCompare(b)).map(([provider, limit]) => ({ provider, ...limit }));
+}
+
 /** Whether any configured combo declares a quota limit. */
 export function comboQuotaLimitsConfigured(config: Pick<OcxConfig, "combos"> | null | undefined): boolean {
   return Object.values(config?.combos ?? {}).some(combo =>
