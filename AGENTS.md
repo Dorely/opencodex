@@ -25,21 +25,26 @@
 
 - `origin` is the owner's fork; `upstream` is lidge-jun/opencodex. Never push to `upstream`, and
   never open pull requests, issues, discussions, reviews, or comments on the upstream project.
-- No releases: do not tag versions, publish to npm, run `scripts/release.ts`, bump versions for
-  release, or dispatch GitHub workflows. Upstream's release and CI machinery is inert here.
+- No releases: do not tag versions, publish to npm, run `scripts/release.ts`, or bump versions for
+  release. Upstream's release machinery is inert here.
+- No GitHub Actions: `.github/workflows/` and `.github/actions/` are deleted and must stay deleted.
+  Do not add workflows, re-enable CI, or rely on CI to verify anything; local checks are the gate.
 - Upstream process rules (PR templates, `enforce-target`, review checklists, `Co-authored-by`
   carry rules, `ci:full` labels, batched `dev` dispatches) do not apply to this fork.
 
 ## Repository workflow
 
-- Inspect branch, working tree, index, and remotes before starting. Continue on the current branch.
+- All work happens on `main`, which tracks `origin/main`. Do not create feature or topic branches;
+  if you find yourself on another branch, stop and ask. `upstream/dev` is only a merge source.
+- Inspect branch, working tree, index, and remotes before starting.
 - Start new work from a clean commit. When you find uncommitted work, decide whether it is complete
   and coherent. If it is, verify and commit it on its own before beginning; if it is incomplete or
   its ownership is unclear, ask rather than overwriting it or mixing it with new work.
 - Preserve unrelated changes. Do not discard work, rewrite published history, or force-push without
-  authorization. Pushing verified commits on the current branch to `origin` is authorized.
-- Finish each coherent task with a focused, verified commit, push it to `origin`, and leave a clean
-  working tree.
+  authorization.
+- Finish each feature set with focused, verified commits on `main`, then `git push origin main`
+  before reporting it done, and leave a clean working tree. That push is authorized and expected;
+  never leave verified work only in the local clone.
 
 ## Merging upstream
 
@@ -47,8 +52,12 @@
 
   ```bash
   git fetch upstream
-  git merge --no-ff upstream/dev
+  git merge --no-ff --no-commit upstream/dev
+  git rm -r -q --ignore-unmatch .github/workflows .github/actions
   ```
+
+  The `git rm` drops any workflow upstream added or changed (it also resolves their modify/delete
+  conflicts); run it before every merge commit.
 
 - Merge, never rebase: fork commits are published on `origin`, and merges keep every sync point
   visible.
@@ -57,8 +66,9 @@
   and the file conflicts instead.
 - If the merge is clean, run `bun install` (and `bun install` in `gui/` when its lockfile changed),
   `bun run typecheck`, `bun fork/test.ts`, and `bun run structure:check`, then commit the merge and
-  push. Upstream CI already ran its full suite on Linux; a failure that also fails on upstream's own
-  head goes in `fork/test-exclude.txt` with a reason instead of being fixed here.
+  push `main`. Upstream CI already ran its full suite on Linux; a failure that also fails on
+  upstream's own head, or a new test that reads deleted workflow files, goes in
+  `fork/test-exclude.txt` with a reason instead of being fixed here.
 - If it conflicts only in files this fork does not own, take upstream's side. If it conflicts with a
   fork divergence listed in FORK.md, stop, `git merge --abort`, and report the conflicting files and
   what each side changed. Do not resolve a conflict against a fork feature without the owner.

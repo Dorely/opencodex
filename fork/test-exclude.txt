@@ -34,3 +34,27 @@ tests/codex-integration/ultrafast-tier-honesty.test.ts  # host-dependent
 tests/config/config-removed-opencode-free.test.ts  # host-dependent
 tests/service/service-status-json.test.ts  # host service state
 tests/windows/windows-service-wrappers.test.ts  # cmd.exe spawn times out under load
+
+# Read .github/workflows or .github/actions, which this fork deletes (FORK.md: GitHub Actions removed).
+tests/ci-workflows/ci-bun-crash-classifier.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-bun-install-frozen.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-concurrency-groups.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-pr-hygiene-approvals.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-privacy-gate.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-scope-gaps.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-scope-reduction.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-structure-gate.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/ci-workflows.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/cleanup-orphaned-workflows.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/keyring-smoke.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/linux-desktop-packaged-ci.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/macos-serial-lanes.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/pr-gates-workflow.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/pr-readiness-reattest.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/release-outcome-report.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/release-preflight.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/release-resume-identity.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/release-version-sources.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/release-windows-signing-outcome.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/zz-ci-api-usage-isolation.test.ts  # reads deleted GitHub workflow files
+tests/ci-workflows/zz-pr-coderabbit-readiness-revalidation.test.ts  # reads deleted GitHub workflow files

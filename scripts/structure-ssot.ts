@@ -416,7 +416,7 @@ export function runStructureChecks(repoRoot: string): string[] {
       // Only tokens rooted at a real top-level entry are paths; the rest are ordinary code spans.
       if (!rootEntries.has(named.split("/")[0]!)) continue;
       if (manifest.generatedPaths.some((g) => named === trimSlash(g) || named.startsWith(trimSlash(g) + "/"))) continue;
-      if (manifest.absentPaths.some((a) => trimSlash(a.path) === named)) continue;
+      if (manifest.absentPaths.some((a) => trimSlash(a.path) === named || (a.path.endsWith("/") && named.startsWith(a.path)))) continue;
       if (manifest.grace.staleRefs.map(trimSlash).includes(named)) continue;
       const verdict = pathIsReal(named);
       if (verdict === "missing") fail("structure/" + rel + " names " + named + ", which this tree does not have");

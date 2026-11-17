@@ -12,6 +12,14 @@
     {
       "path": "go/",
       "reason": "the Go native-runtime experiment is retired; ops/docs-and-release.md documents that no go/ tree is tracked"
+    },
+    {
+      "path": ".github/workflows/",
+      "reason": "fork: GitHub Actions are deleted in this personal fork (FORK.md); docs naming workflow files describe upstream"
+    },
+    {
+      "path": ".github/actions/",
+      "reason": "fork: the composite actions served only the deleted workflows (FORK.md)"
     }
   ],
   "tiers": [

@@ -10,7 +10,9 @@ Each entry names the files touched, why, and what a merge must preserve.
 ## Remotes and merging
 
 - `origin` = `Dorely/opencodex` (this fork), `upstream` = `lidge-jun/opencodex`.
-- Sync with `git fetch upstream && git merge --no-ff upstream/dev`; the full procedure is in
+- The fork's working branch is `main` (upstream's is `dev`); `upstream/dev` is merged into `main`.
+- Sync with `git fetch upstream && git merge --no-ff --no-commit upstream/dev`, then
+  `git rm -r -q --ignore-unmatch .github/workflows .github/actions`; the full procedure is in
   [AGENTS.md](AGENTS.md) under "Merging upstream".
 - One-time per clone: `git config merge.ours.driver true` (activates the `AGENTS.md` rule below).
 
@@ -25,6 +27,19 @@ Each entry names the files touched, why, and what a merge must preserve.
   `bun run structure:check` requires a `## Commands` heading because `structure/ops/docs-and-release.md`
   links to `AGENTS.md#commands`. If upstream adds another such dependency, adjust our file rather than
   taking theirs.
+
+## GitHub Actions removed
+
+- **Files:** `.github/workflows/` and `.github/actions/` (deleted); `structure/manifest.json`
+  (`absentPaths` entries for both); `scripts/structure-ssot.ts` (one line: an `absentPaths` entry
+  ending in `/` also covers every path under it, so upstream docs that name workflow files pass);
+  `fork/test-exclude.txt` (the test files that read workflow files).
+- **Why:** no CI, release, or bot automation runs for this fork; local checks are the gate. The rest
+  of `.github/` (issue and PR templates, `CODEOWNERS`, `scripts/`, nested `AGENTS.md`) is inert and
+  left in place to keep merges small.
+- **Merge must preserve:** run `git rm -r -q --ignore-unmatch .github/workflows .github/actions` before
+  each upstream merge commit; it removes new workflows and resolves modify/delete conflicts. Exclude
+  any new test that fails because it reads a workflow file.
 
 ## Offline-only test suite
 
