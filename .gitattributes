@@ -8,3 +8,6 @@
 *.ico binary
 *.zip binary
 *.gz binary
+
+# Fork: keep our root agent guide when merging upstream (needs `git config merge.ours.driver true`).
+/AGENTS.md merge=ours

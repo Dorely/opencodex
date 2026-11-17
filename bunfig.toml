@@ -22,4 +22,4 @@ root = "tests"
 # so such writes throw instead of landing, but a test that needs a config directory still pins its
 # own OPENCODEX_HOME instead of trusting this line, and `tests/ci-workflows/test-home-guard.test.ts`
 # enforces that for the destructive case.
-preload = ["./tests/preload.ts"]
+preload = ["./tests/preload.ts", "./fork/network-guard.ts"]

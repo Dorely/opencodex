@@ -1,0 +1,36 @@
+# Test files fork/test.ts skips in addition to its network scan (see FORK.md).
+# One path per line, relative to the repository root; text after # is the reason.
+# Re-check entries after an upstream merge: a fixed file can come back off this list.
+
+# Real network I/O the scan cannot see (started inside src/ or a child); fork/network-guard.ts blocks it.
+tests/claude-integration/claude-picker-startup.test.ts  # network: blocked by guard
+tests/clients/client-runtime-restart.test.ts  # network: blocked by guard
+tests/clients/remote-workspace-cli-runtimes.test.ts  # network: blocked by guard
+tests/clients/remote-workspace-codex-runtime.test.ts  # network: blocked by guard
+tests/clients/remote-workspace-tool-bridge.test.ts  # network: blocked by guard
+tests/codex-integration/codex-cli-update-windows-apply.test.ts  # network: blocked by guard
+tests/codex-integration/exec-trust-boundary.test.ts  # network: blocked by guard
+tests/codex-integration/messaging-remote-forward-failure.test.ts  # network: blocked by guard
+tests/lab/link-child-ops-no-timer.test.ts  # network: blocked by guard
+
+# Lab live-probe suites: exercise live route probing and receipts; fail with the network blocked.
+tests/lab/lab-live-probe.test.ts  # live probe
+tests/lab/lab-live-receipt-integrity.test.ts  # live probe receipts
+tests/lab/lab-live-review-regressions.test.ts  # live probe
+tests/lab/lab-evidence-sanitization.test.ts  # live result receipts
+tests/lab/lab-automation-review-regressions.test.ts  # live probe automation
+tests/lab/lab-automation-final-coderabbit-regressions.test.ts  # live probe automation, times out
+
+# Fail on this Windows dev host independent of fork changes (ACLs, timing, host config).
+tests/claude-integration/claude-intercept-local-ca-files.test.ts  # Windows ACL inspection times out
+tests/config/config-account-auto-pause-revisions.test.ts  # icacls ACL hardening times out
+tests/oauth/oauth-store-multi.test.ts  # times out
+tests/routing/compatibility-provider-equivalence.test.ts  # hook times out
+tests/routing/routing-compatibility.test.ts  # hook times out
+tests/ci-workflows/test-git-isolation.test.ts  # nested bun test output mismatch
+tests/clients/client-disconnect-field-snapshot.test.ts  # host-dependent
+tests/clients/route-intent-claude-surface.test.ts  # host-dependent
+tests/codex-integration/ultrafast-tier-honesty.test.ts  # host-dependent
+tests/config/config-removed-opencode-free.test.ts  # host-dependent
+tests/service/service-status-json.test.ts  # host service state
+tests/windows/windows-service-wrappers.test.ts  # cmd.exe spawn times out under load
