@@ -80,6 +80,7 @@ import {
   type ClaudeThinkingProjection,
 } from "../lib/claude-request-projection";
 import { assertModelNotHidden, isClaudeOperatorModel } from "../routing/hidden-models";
+import { logPassthroughUpstreamError } from "./fork-passthrough-error-log";
 import { captureRouteStaticPolicy, NoEligiblePolicyCandidateError, previewRouteModel, routedProviderConfig, UnknownRoutingPolicyError, routeModel, type RouteResult } from "../router";
 import { evidenceFromBody } from "../routing/request-evidence";
 import { resolveWireProtocolOverride } from "./adapter-resolve";
@@ -436,6 +437,7 @@ async function anthropicNativePassthrough(
     // Upstream text is untrusted: retain only a closed type vocabulary in history.
     // Bound parsing work independently of the larger response-relay body limit.
     const statusReason = `Provider error ${upstream.status}`;
+    logPassthroughUpstreamError({ status: upstream.status, path: `${pathname}${search}`, model, body: text, requestHeaders: headers, responseHeaders: upstream.headers }); // Fork
     recordLocalFailureDetail(logCtx, statusReason, { code: "provider_error" }, { upstreamEvidence: true });
     if (text.length <= PASSTHROUGH_ERROR_DETAIL_MAX_CHARS) {
       try {

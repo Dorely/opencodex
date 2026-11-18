@@ -83,3 +83,12 @@ sidecar would read the image for it. The native `openai` lane and combos cannot 
 The combo detail panel lists targets whose row does not declare image input
 (`gui/src/fork/ComboModalityProbeField.tsx`) with a "Test image input" button and the last result;
 a pass that declared image reloads the page's model rows, so the image input switch can turn on.
+
+## Passthrough error log
+
+When the native Anthropic passthrough (`anthropicNativePassthrough` in `src/server/claude-messages.ts`)
+gets a 4xx or 5xx from the upstream, `src/server/fork-passthrough-error-log.ts` appends one JSON line to
+`<configDir>/fork/passthrough-errors.jsonl`: time, status, upstream path, model, the redacted error
+body (2,000 characters at most), the `anthropic-version`, `anthropic-beta`, `user-agent` and `x-app`
+request headers, a few response headers (`request-id`, `cf-ray`), and the kind of credential sent
+(`oauth`, `api-key` or `other`, never the value). The file stops growing at 2 MB. Writing never throws.

@@ -148,6 +148,16 @@ Each entry names the files touched, why, and what a merge must preserve.
   bare header. If upstream moves the chat surface's hidden check or its `advisorInternal` capability
   read, move the probe check with them.
 
+## Passthrough error log
+
+- **Files:** `src/server/fork-passthrough-error-log.ts` (new); `src/server/claude-messages.ts` (one import and
+  one call in `anthropicNativePassthrough`, in the non-stream `upstream.status >= 400` branch). How it
+  behaves: [structure/fork-features.md](structure/fork-features.md#passthrough-error-log).
+- **Why:** upstream keeps only a closed error type for a failed Anthropic passthrough, so an intermittent
+  404 on a Claude model could not be explained from the logs.
+- **Merge must preserve:** the call sits where the upstream error text is in hand, before `finalize`.
+  It records no credential and no request body, and it never throws.
+
 ## Fork tests, layout and docs
 
 - **Files:** `tests/routing/fork-*.test.ts`, `tests/gui/fork-*.test.ts`,
