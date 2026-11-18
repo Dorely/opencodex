@@ -123,7 +123,8 @@ Each entry names the files touched, why, and what a merge must preserve.
 - **Why:** lets a combo stop using a provider once its 5-hour or weekly usage passes a percent,
   for example `"quotaLimits": [{ "provider": "commandcode", "fiveHourPercent": 50, "weeklyPercent": 50 }]`.
 - **Merge must preserve:** the exclusion lives in `providerExclusionReason`; unknown, stale or reset
-  usage fails open; the refresher runs only while a combo declares a limit. The dashboard sends
+  usage fails open, with reset times normalized by `epochMillis` (the Codex report uses epoch
+  seconds; comparing those to a millisecond clock made every Codex window look already reset); the refresher runs only while a combo declares a limit. The dashboard sends
   `quotaLimits` only when the combo has one, because upstream GUI tests assert the exact save body; if
   upstream reshapes the combo editor or its save body, move the field and the sparse send with it.
 

@@ -51,7 +51,8 @@ direct calls to the same provider keep routing.
 
 Evidence is `getCachedProviderRoutingQuota`, falling back to the provider's cached report
 (`getCachedProviderQuota`). Unknown usage, a report older than 30 minutes, and a window whose reset
-time has passed never exclude. Because upstream refreshes quota only for the dashboard,
+time has passed never exclude. Reset times go through `epochMillis` first, because the Codex
+(`chatgpt:wham`) report carries epoch seconds while most reports carry milliseconds. Because upstream refreshes quota only for the dashboard,
 `src/combos/combo-quota-limit-refresher.ts` (started and stopped by
 `src/server/index/optional-listeners.ts`, following the live config) calls the dashboard's
 non-forced `fetchProviderQuotaReports` every five minutes while any combo declares a limit, and is

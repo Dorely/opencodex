@@ -14,7 +14,8 @@ import type { OcxConfig } from "../../src/types";
 
 // Fork: a combo can refuse a provider's targets while that provider's 5h or weekly quota usage
 // is above a percent the combo sets (src/combos/quota-limits.ts).
-const now = 1_000_000;
+// A real epoch-ms clock: reports carry reset times in epoch seconds or milliseconds.
+const now = 1_795_034_983_423;
 const limits = [{ provider: "commandcode", fiveHourPercent: 50, weeklyPercent: 50 }];
 function config(quotaLimits: unknown = limits): OcxConfig {
   return {
@@ -79,6 +80,28 @@ describe("combo quota limits", () => {
     expect(comboTargetQuotaLimitExceeded(config(), target, now)).toBe(false);
     setCachedProviderQuotaForTests("commandcode", { fiveHourPercent: 90, fiveHourResetAt: now + 60_000, updatedAt: now });
     expect(comboTargetQuotaLimitExceeded(config(), target, now)).toBe(true);
+  });
+
+  test("a Codex report with reset times in epoch seconds still blocks", () => {
+    // Live shape of the native OpenAI (chatgpt:wham) report, a forward-auth provider whose only
+    // evidence is the dashboard report.
+    const cfg = {
+      ...config([{ provider: "openai", fiveHourPercent: 75, weeklyPercent: 75 }]),
+      providers: {
+        openai: { adapter: "openai-responses", baseUrl: "https://chatgpt.example/backend-api/codex", authMode: "forward" },
+        other: { adapter: "openai-chat", baseUrl: "https://other.example/v1", apiKey: "k2", models: ["m1"] },
+      },
+      combos: { Expensive: { quotaLimits: [{ provider: "openai", fiveHourPercent: 75, weeklyPercent: 75 }],
+        targets: [{ provider: "openai", model: "gpt-6.2-sol" }, { provider: "other", model: "m1" }] } },
+    } as unknown as OcxConfig;
+    const seconds = Math.floor(now / 1000);
+    setCachedProviderQuotaForTests("openai", { fiveHourPercent: 100, fiveHourResetAt: seconds + 14_000, weeklyPercent: 22, weeklyResetAt: seconds + 600_000, updatedAt: now });
+    expect(pickComboTarget(cfg, "Expensive", { now })?.target.provider).toBe("other");
+    setCachedProviderQuotaForTests("openai", { fiveHourPercent: 76, fiveHourResetAt: seconds + 14_000, updatedAt: now });
+    expect(pickComboTarget(cfg, "Expensive", { now })?.target.provider).toBe("other");
+    // A seconds-unit reset that already passed no longer blocks.
+    setCachedProviderQuotaForTests("openai", { fiveHourPercent: 100, fiveHourResetAt: seconds - 1, updatedAt: now });
+    expect(pickComboTarget(cfg, "Expensive", { now })?.target.provider).toBe("openai");
   });
 
   test("exactly at the limit is allowed; a single-window limit ignores the other window", () => {

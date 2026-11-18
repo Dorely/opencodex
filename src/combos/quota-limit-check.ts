@@ -1,13 +1,16 @@
 /** Cache-reading half of per-combo quota limits (fork feature); see `quota-limits.ts`. */
 import { getCachedProviderQuota, getCachedProviderRoutingQuota } from "../providers/quota-routing-cache";
 import type { ProviderQuota } from "../providers/quota-types";
+import { epochMillis } from "../providers/quota-wire";
 import type { OcxConfig } from "../types";
 import type { ComboTargetQuotaLimit } from "./quota-limits";
 
 function windowAbove(percent: number | undefined, resetAt: number | undefined, limit: number | undefined, now: number): boolean {
   if (limit === undefined || typeof percent !== "number" || !Number.isFinite(percent)) return false;
-  // A window whose reset already passed no longer describes current usage.
-  if (typeof resetAt === "number" && Number.isFinite(resetAt) && resetAt <= now) return false;
+  // A window whose reset already passed no longer describes current usage. Reports mix units:
+  // the Codex (chatgpt:wham) report carries epoch seconds, most others epoch milliseconds.
+  const resetMs = typeof resetAt === "number" ? epochMillis(resetAt) : undefined;
+  if (resetMs !== undefined && resetMs <= now) return false;
   return percent > limit;
 }
 
