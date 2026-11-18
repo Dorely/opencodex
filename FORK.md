@@ -154,7 +154,11 @@ Each entry names the files touched, why, and what a merge must preserve.
   one call in `anthropicNativePassthrough`, in the non-stream `upstream.status >= 400` branch). How it
   behaves: [structure/fork-features.md](structure/fork-features.md#passthrough-error-log).
 - **Why:** upstream keeps only a closed error type for a failed Anthropic passthrough, so an intermittent
-  404 on a Claude model could not be explained from the logs.
+  404 on a Claude model could not be explained from the logs. The log showed the 404s were Anthropic's
+  `thread_not_found` (message-threads beta), which upstream's rebuilt error body drops; Claude Code then
+  shows "Model isn't available" instead of replaying the conversation. `withRelayedErrorDetails` (same
+  file, wrapped around `ownedAnthropicErrorPayload` in the passthrough) puts that code and Anthropic's
+  message back, for a closed set of codes.
 - **Merge must preserve:** the call sits where the upstream error text is in hand, before `finalize`.
   It records no credential and no request body, and it never throws.
 

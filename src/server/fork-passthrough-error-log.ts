@@ -70,3 +70,21 @@ export function logPassthroughUpstreamError(input: PassthroughErrorInput, path =
     appendFileSync(path, `${JSON.stringify(buildPassthroughErrorRecord(input))}\n`, { encoding: "utf8", mode: 0o600 });
   } catch { /* best effort */ }
 }
+
+/**
+ * Error codes Claude Code acts on itself. `thread_not_found` makes it replay the full conversation
+ * with a new thread; without the code it shows "Model isn't available" instead.
+ */
+const RELAYED_ERROR_CODES: ReadonlySet<string> = new Set(["thread_not_found"]);
+
+/** Put a recoverable upstream `error.details.error_code` (and its message) back on the rebuilt body. */
+export function withRelayedErrorDetails(payload: Record<string, unknown>, upstream: unknown): Record<string, unknown> {
+  const error = upstream && typeof upstream === "object" ? (upstream as Record<string, unknown>).error : undefined;
+  if (!error || typeof error !== "object") return payload;
+  const details = (error as Record<string, unknown>).details;
+  const code = details && typeof details === "object" ? (details as Record<string, unknown>).error_code : undefined;
+  if (typeof code !== "string" || !RELAYED_ERROR_CODES.has(code)) return payload;
+  const message = (error as Record<string, unknown>).message;
+  const owned = (payload.error && typeof payload.error === "object" ? payload.error : {}) as Record<string, unknown>;
+  return { ...payload, error: { ...owned, ...(typeof message === "string" ? { message: message.slice(0, 500) } : {}), details: { error_code: code } } };
+}

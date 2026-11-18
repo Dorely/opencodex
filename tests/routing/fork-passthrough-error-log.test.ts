@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { buildPassthroughErrorRecord, credentialKind, logPassthroughUpstreamError } from "../../src/server/fork-passthrough-error-log";
+import { buildPassthroughErrorRecord, credentialKind, logPassthroughUpstreamError, withRelayedErrorDetails } from "../../src/server/fork-passthrough-error-log";
 import { createTempHome, type TempHome } from "../helpers/temp-home";
 
 // Fork: the Anthropic passthrough keeps the upstream's error body for diagnosis, without credentials.
@@ -42,5 +42,17 @@ describe("passthrough error log", () => {
     logPassthroughUpstreamError(input("second"), path);
     const lines = readFileSync(path, "utf8").trim().split("\n").map(line => JSON.parse(line));
     expect(lines.map(line => line.body)).toEqual(["first", "second"]);
+  });
+
+  test("relays thread_not_found so Claude Code replays the conversation", () => {
+    const owned = { type: "error", error: { type: "not_found_error", message: "The requested model is unavailable." } };
+    const upstream = { type: "error", error: { type: "not_found_error", message: "No thread state was found for the requested `previous_message_id`.", details: { error_code: "thread_not_found" } } };
+    expect(withRelayedErrorDetails(owned, upstream)).toEqual({ type: "error", error: {
+      type: "not_found_error", message: "No thread state was found for the requested `previous_message_id`.", details: { error_code: "thread_not_found" } } });
+    // Other codes and shapes keep the owned body.
+    const other = { error: { message: "x", details: { error_code: "model_not_found" } } };
+    expect(withRelayedErrorDetails(owned, other)).toBe(owned);
+    expect(withRelayedErrorDetails(owned, undefined)).toBe(owned);
+    expect(withRelayedErrorDetails(owned, { error: "nope" })).toBe(owned);
   });
 });

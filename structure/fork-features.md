@@ -92,3 +92,8 @@ gets a 4xx or 5xx from the upstream, `src/server/fork-passthrough-error-log.ts` 
 body (2,000 characters at most), the `anthropic-version`, `anthropic-beta`, `user-agent` and `x-app`
 request headers, a few response headers (`request-id`, `cf-ray`), and the kind of credential sent
 (`oauth`, `api-key` or `other`, never the value). The file stops growing at 2 MB. Writing never throws.
+
+The same branch relays a closed set of upstream `error.details.error_code` values that Claude Code acts
+on (`withRelayedErrorDetails`): today only `thread_not_found`, which makes Claude Code replay the full
+conversation in a new thread. Upstream's rebuilt error body drops `details`, so without this the
+client shows "Model isn't available".

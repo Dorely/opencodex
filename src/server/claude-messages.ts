@@ -80,7 +80,7 @@ import {
   type ClaudeThinkingProjection,
 } from "../lib/claude-request-projection";
 import { assertModelNotHidden, isClaudeOperatorModel } from "../routing/hidden-models";
-import { logPassthroughUpstreamError } from "./fork-passthrough-error-log";
+import { logPassthroughUpstreamError, withRelayedErrorDetails } from "./fork-passthrough-error-log";
 import { captureRouteStaticPolicy, NoEligiblePolicyCandidateError, previewRouteModel, routedProviderConfig, UnknownRoutingPolicyError, routeModel, type RouteResult } from "../router";
 import { evidenceFromBody } from "../routing/request-evidence";
 import { resolveWireProtocolOverride } from "./adapter-resolve";
@@ -468,13 +468,13 @@ async function anthropicNativePassthrough(
   const originalMessage = typeof error.message === "string" ? error.message : "";
   const throughput = isThroughputLimitText(originalMessage);
   const overflow = messagesRelayedOverflowPresentation(text, parsed);
-  const clientBody = isError ? JSON.stringify(ownedAnthropicErrorPayload({ status: upstream.status,
+  const clientBody = isError ? JSON.stringify(withRelayedErrorDetails(ownedAnthropicErrorPayload({ status: upstream.status, // Fork: withRelayedErrorDetails
     overflow, ...(throughput ? { condition: "rate_limited" as const } : {}),
     type: typeof error.type === "string" ? error.type : undefined,
     code: typeof error.code === "string" ? error.code : undefined,
     evidence: { status: upstream.status, type: typeof error.type === "string" ? error.type : undefined,
       code: typeof error.code === "string" ? error.code : undefined, message: typeof error.message === "string" ? error.message : undefined },
-  })) : text;
+  }), parsed)) : text;
   const out = new Response(clientBody, {
     status: upstream.status,
     headers: { ...rateLimitHeaders, "Content-Type": isError ? "application/json" : messagesSuccessContentType(upstream.headers), ...(retryAfter ? { "Retry-After": retryAfter } : {}) },
