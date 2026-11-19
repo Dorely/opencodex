@@ -1756,5 +1756,5 @@
   "responses-offline-resend.test.ts": "responses",
   "link-ws-autobahn.test.ts": "clients",
   "routing-profile-types-reexport.test.ts": "config",
-  "fork-hidden-models.test.ts": "routing", "fork-combo-quota-limits.test.ts": "routing", "fork-combo-quota-limits-gui.test.ts": "gui", "fork-combo-quota-limits-route.test.ts": "routing", "fork-modality-probe.test.ts": "routing", "fork-passthrough-error-log.test.ts": "routing", "fork-modality-probe-gui.test.ts": "gui"
+  "fork-hidden-models.test.ts": "routing", "fork-combo-quota-limits.test.ts": "routing", "fork-combo-quota-limits-gui.test.ts": "gui", "fork-combo-quota-limits-route.test.ts": "routing", "fork-modality-probe.test.ts": "routing", "fork-passthrough-error-log.test.ts": "routing", "fork-combo-spend-limits.test.ts": "routing", "fork-modality-probe-gui.test.ts": "gui"
 }

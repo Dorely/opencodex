@@ -118,7 +118,7 @@ describe("combo quota limits", () => {
       .filter(issue => issue.path[0] === "quotaLimits").map(issue => issue.message);
     expect(issues(limits)).toEqual([]);
     expect(issues({})).toEqual(["quotaLimits must be an array"]);
-    expect(issues([{ provider: "commandcode" }])).toEqual(["quota limit needs fiveHourPercent or weeklyPercent"]);
+    expect(issues([{ provider: "commandcode" }])).toEqual(["quota limit needs fiveHourPercent, weeklyPercent, weeklySpendUsd or monthlySpendUsd"]);
     expect(issues([{ provider: "commandcode", weeklyPercent: 101 }])).toEqual(["weeklyPercent must be a number from 0 to 100"]);
     expect(issues([{ provider: "", weeklyPercent: 5 }])).toEqual(["quota limit provider must be a non-empty provider name"]);
     expect(issues([{ provider: "a", weeklyPercent: 5 }, { provider: "a", fiveHourPercent: 5 }])).toEqual(["quota limit for provider \"a\" is declared twice"]);

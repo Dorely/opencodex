@@ -64,6 +64,24 @@ save body carries `quotaLimits` only when the combo has one, filtered to provide
 The management combo save stores the combo-level list, never the per-target `quotaLimit`, keeps a
 stored list when the request omits the field, and clears it on an empty array.
 
+### Spend limits
+
+An entry may also (or instead) carry `weeklySpendUsd` and `monthlySpendUsd` (US dollars,
+0..1,000,000), for a provider with no readable quota such as an Anthropic API key billed from account
+funds. `src/combos/spend-tracker.ts` builds estimated spend per provider from the usage log with the
+same checkpointed scan the usage projections use (one full pass, then appended rows; rebuilt when the
+file is replaced or shrinks). Each row is priced with `computeEntryCost`, so user price overrides apply,
+and added to its provider's local calendar day; a combo row adds each attempt to the attempt's own
+provider. Only 62 days are kept. The week starts Monday 00:00 local time and the month on the 1st.
+
+`comboTargetSpendLimitReached` in `quota-limit-check.ts` excludes the provider once spend is at or
+above a limit, with the exclusion reason `spend limit` (classified like `quota limit`). Spend counts
+every request on that provider, not only the combo's. Before the first scan finishes spend is unknown
+and does not block. Unpriced models add nothing and are counted as `unpricedRequests`. The refresher
+also brings spend up to date every minute while any combo declares a spend limit.
+`GET /api/fork/combo-spend` (`src/server/management/fork-combo-spend.ts`, `gui-only`) returns current
+spend per provider, which the cutoffs field shows under each provider name.
+
 ## Modality probe
 
 `POST /api/fork/modality-probes` with `{ provider, model, modality: "image" }` tests whether a routed

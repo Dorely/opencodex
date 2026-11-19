@@ -4,6 +4,7 @@ import type { ProviderQuota } from "../providers/quota-types";
 import { epochMillis } from "../providers/quota-wire";
 import type { OcxConfig } from "../types";
 import type { ComboTargetQuotaLimit } from "./quota-limits";
+import { providerSpend } from "./spend-tracker";
 
 function windowAbove(percent: number | undefined, resetAt: number | undefined, limit: number | undefined, now: number): boolean {
   if (limit === undefined || typeof percent !== "number" || !Number.isFinite(percent)) return false;
@@ -32,4 +33,21 @@ export function comboTargetQuotaLimitExceeded(
   if (!quota) return false;
   return windowAbove(quota.fiveHourPercent, quota.fiveHourResetAt, limit.fiveHourPercent, now)
     || windowAbove(quota.weeklyPercent, quota.weeklyResetAt, limit.weeklyPercent, now);
+}
+
+/**
+ * True when the target's provider has reached a spend limit its combo set: estimated spend this
+ * calendar week or month is at or above the limit. Before the first usage-log scan finishes, spend
+ * is unknown and does not block.
+ */
+export function comboTargetSpendLimitReached(
+  target: { provider: string; quotaLimit?: ComboTargetQuotaLimit },
+  now = Date.now(),
+): boolean {
+  const limit = target.quotaLimit;
+  if (limit?.weeklySpendUsd === undefined && limit?.monthlySpendUsd === undefined) return false;
+  const spend = providerSpend(target.provider, now);
+  if (!spend) return false;
+  return (limit.weeklySpendUsd !== undefined && spend.weekUsd >= limit.weeklySpendUsd)
+    || (limit.monthlySpendUsd !== undefined && spend.monthUsd >= limit.monthlySpendUsd);
 }

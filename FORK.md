@@ -112,7 +112,9 @@ Each entry names the files touched, why, and what a merge must preserve.
   `src/combos/types.ts` (validation and per-target `quotaLimit`), `src/combos/resolve.ts`
   (`"quota limit"` exclusion reason), `src/types/config.ts` (`OcxComboConfig.quotaLimits`),
   `src/server/management/combo-routes.ts` (PUT keeps a stored `quotaLimits` when omitted),
-  `src/server/index/optional-listeners.ts` (refresher start/stop). Dashboard editor:
+  `src/server/index/optional-listeners.ts` (refresher start/stop). Spend limits: `src/combos/spend-tracker.ts`
+  and `src/server/management/fork-combo-spend.ts` (new), the `"spend limit"` reason in `resolve.ts`, one
+  dispatch line in `src/server/management-api.ts` and a `gui-only` entry in `route-registry.ts`. Dashboard editor:
   `gui/src/fork/combo-quota-limits.ts` and `gui/src/fork/ComboQuotaLimitsField.tsx` (new, English-only
   copy so the eleven locale catalogs stay untouched), plus small edits in
   `gui/src/combo-workspace-data.ts` (parse, compare, and send a sparse `quotaLimits`) and
@@ -121,7 +123,9 @@ Each entry names the files touched, why, and what a merge must preserve.
   there; the route strips the per-target `quotaLimit` before storing. How it behaves:
   [structure/fork-features.md](structure/fork-features.md#combo-quota-limits).
 - **Why:** lets a combo stop using a provider once its 5-hour or weekly usage passes a percent,
-  for example `"quotaLimits": [{ "provider": "commandcode", "fiveHourPercent": 50, "weeklyPercent": 50 }]`.
+  for example `"quotaLimits": [{ "provider": "commandcode", "fiveHourPercent": 50, "weeklyPercent": 50 }]`,
+  or once its estimated spend this calendar week or month reaches a dollar amount, for providers with no
+  readable quota (an Anthropic API key): `{ "provider": "anthropic-apikey", "monthlySpendUsd": 80 }`.
 - **Merge must preserve:** the exclusion lives in `providerExclusionReason`; unknown, stale or reset
   usage fails open, with reset times normalized by `epochMillis` (the Codex report uses epoch
   seconds; comparing those to a millisecond clock made every Codex window look already reset); the refresher runs only while a combo declares a limit. The dashboard sends

@@ -10,6 +10,16 @@
  * target on the provider; other combos and direct calls are unaffected. When no target is left the
  * combo answers `combo_unavailable` with the reason "quota limit".
  *
+ * A row may instead (or also) cap spend in US dollars for providers without a readable quota, such
+ * as an Anthropic API key billed from account funds:
+ *
+ *   { "provider": "anthropic-apikey", "weeklySpendUsd": 25, "monthlySpendUsd": 80 }
+ *
+ * Spend is the sum of opencodex's own cost estimates for that provider's requests (every client,
+ * not only this combo) in the current calendar week (from Monday 00:00 local time) or month (from
+ * the 1st, 00:00 local time); `spend-tracker.ts` keeps it from the usage log. The provider is skipped
+ * once spend reaches the limit.
+ *
  * Evidence is the provider quota cache only; this never probes upstream on a request. Unknown or
  * stale usage (no report in the last 30 minutes, or a window whose reset has passed) does not block:
  * `combo-quota-limit-refresher.ts` keeps the cache warm while any combo declares a limit.
@@ -26,15 +36,32 @@ export interface OcxComboQuotaLimit {
   fiveHourPercent?: number;
   /** Skip the provider's targets while weekly usage is above this percent (0..100). */
   weeklyPercent?: number;
+  /** Skip the provider's targets once its estimated spend this calendar week reaches this many USD. */
+  weeklySpendUsd?: number;
+  /** Skip the provider's targets once its estimated spend this calendar month reaches this many USD. */
+  monthlySpendUsd?: number;
 }
 
 /** The limit attached to one normalized target. */
 export interface ComboTargetQuotaLimit {
   fiveHourPercent?: number;
   weeklyPercent?: number;
+  weeklySpendUsd?: number;
+  monthlySpendUsd?: number;
 }
 
-const WINDOW_FIELDS = ["fiveHourPercent", "weeklyPercent"] as const;
+const PERCENT_FIELDS = ["fiveHourPercent", "weeklyPercent"] as const;
+const SPEND_FIELDS = ["weeklySpendUsd", "monthlySpendUsd"] as const;
+const WINDOW_FIELDS = [...PERCENT_FIELDS, ...SPEND_FIELDS] as const;
+export const MAX_SPEND_LIMIT_USD = 1_000_000;
+
+function validSpend(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= MAX_SPEND_LIMIT_USD;
+}
+
+function validWindow(field: (typeof WINDOW_FIELDS)[number], value: unknown): value is number {
+  return (SPEND_FIELDS as readonly string[]).includes(field) ? validSpend(value) : validPercent(value);
+}
 
 function validPercent(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
@@ -60,9 +87,13 @@ export function comboQuotaLimitIssues(raw: unknown): { path: (string | number)[]
     for (const field of WINDOW_FIELDS) {
       if (row[field] === undefined || row[field] === null) continue;
       windows++;
-      if (!validPercent(row[field])) issues.push({ path: [index, field], message: `${field} must be a number from 0 to 100` });
+      if (!validWindow(field, row[field])) {
+        issues.push({ path: [index, field], message: (SPEND_FIELDS as readonly string[]).includes(field)
+          ? `${field} must be a number of US dollars from 0 to ${MAX_SPEND_LIMIT_USD}`
+          : `${field} must be a number from 0 to 100` });
+      }
     }
-    if (windows === 0) issues.push({ path: [index], message: "quota limit needs fiveHourPercent or weeklyPercent" });
+    if (windows === 0) issues.push({ path: [index], message: "quota limit needs fiveHourPercent, weeklyPercent, weeklySpendUsd or monthlySpendUsd" });
     for (const key of Object.keys(row)) {
       if (key !== "provider" && !(WINDOW_FIELDS as readonly string[]).includes(key)) {
         issues.push({ path: [index, key], message: `unknown quota limit field "${key}"` });
@@ -82,7 +113,7 @@ export function normalizeComboQuotaLimits(raw: unknown): Map<string, ComboTarget
     const provider = typeof row.provider === "string" ? row.provider.trim() : "";
     if (!provider || out.has(provider)) continue;
     const limit: ComboTargetQuotaLimit = {};
-    for (const field of WINDOW_FIELDS) if (validPercent(row[field])) limit[field] = row[field] as number;
+    for (const field of WINDOW_FIELDS) if (validWindow(field, row[field])) limit[field] = row[field] as number;
     if (Object.keys(limit).length > 0) out.set(provider, limit);
   }
   return out;
@@ -97,4 +128,15 @@ export function comboQuotaLimitList(limits: Map<string, ComboTargetQuotaLimit>):
 export function comboQuotaLimitsConfigured(config: Pick<OcxConfig, "combos"> | null | undefined): boolean {
   return Object.values(config?.combos ?? {}).some(combo =>
     normalizeComboQuotaLimits((combo as { quotaLimits?: unknown } | undefined)?.quotaLimits).size > 0);
+}
+
+/** Whether a normalized limit caps spend. */
+export function limitCapsSpend(limit: ComboTargetQuotaLimit | undefined): boolean {
+  return limit?.weeklySpendUsd !== undefined || limit?.monthlySpendUsd !== undefined;
+}
+
+/** Whether any configured combo declares a spend limit. */
+export function comboSpendLimitsConfigured(config: Pick<OcxConfig, "combos"> | null | undefined): boolean {
+  return Object.values(config?.combos ?? {}).some(combo =>
+    [...normalizeComboQuotaLimits((combo as { quotaLimits?: unknown } | undefined)?.quotaLimits).values()].some(limitCapsSpend));
 }

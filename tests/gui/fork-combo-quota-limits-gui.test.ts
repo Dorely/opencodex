@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { draftEquals, emptyDraft, parseComboList, toPutBody } from "../../gui/src/combo-workspace-data";
-import { parseComboQuotaLimits, quotaLimitsForSave, setQuotaLimitWindow } from "../../gui/src/fork/combo-quota-limits";
+import { parseComboQuotaLimits, parseComboSpend, quotaLimitsForSave, setQuotaLimitWindow } from "../../gui/src/fork/combo-quota-limits";
 
 // Fork: the dashboard edits per-combo provider quota cutoffs (gui/src/fork/combo-quota-limits.ts).
 describe("dashboard combo quota cutoffs", () => {
@@ -36,5 +36,16 @@ describe("dashboard combo quota cutoffs", () => {
     const draft = { ...emptyDraft("c"), targets: [{ provider: "cc", model: "m" }] } as ReturnType<typeof emptyDraft>;
     expect(Object.hasOwn(toPutBody(draft).combo, "quotaLimits")).toBe(false);
     expect(toPutBody({ ...draft, quotaLimits: [] }).combo.quotaLimits).toEqual([]);
+  });
+
+  test("spend limits parse, edit and round-trip in dollars", () => {
+    expect(parseComboQuotaLimits([{ provider: "api", weeklySpendUsd: 25.5, monthlySpendUsd: 80 }, { provider: "bad", monthlySpendUsd: -1 }]))
+      .toEqual([{ provider: "api", weeklySpendUsd: 25.5, monthlySpendUsd: 80 }]);
+    const set = setQuotaLimitWindow([{ provider: "api", weeklyPercent: 50 }], "api", "monthlySpendUsd", 120);
+    expect(set).toEqual([{ provider: "api", weeklyPercent: 50, monthlySpendUsd: 120 }]);
+    expect(quotaLimitsForSave(set, [{ provider: "api" }])).toEqual([{ provider: "api", weeklyPercent: 50, monthlySpendUsd: 120 }]);
+    expect(parseComboSpend({ providers: { api: { weekUsd: 1.5, monthUsd: 4, unpricedRequests: 2 }, junk: {} } }))
+      .toEqual({ api: { weekUsd: 1.5, monthUsd: 4, unpricedRequests: 2 } });
+    expect(parseComboSpend({ providers: null })).toBeNull();
   });
 });
